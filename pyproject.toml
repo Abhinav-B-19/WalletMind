@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -51,10 +51,6 @@ select = [
 ]
 ignore = []
 
-[tool.pytest.ini_options]
-minversion = "8.0"
-addopts = "-ra --strict-config --strict-markers"
-testpaths = ["tests"]
 
 keywords = [
     "ai",
@@ -77,3 +73,9 @@ classifiers = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
