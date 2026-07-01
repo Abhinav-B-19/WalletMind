@@ -1,5 +1,6 @@
 ﻿# Runtime dependencies
 pydantic>=2.8
+sqlalchemy>=2.0
 
 # Development tooling
 black>=24.0
