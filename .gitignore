@@ -216,3 +216,66 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ==========================================================
+# WalletMind Project
+# ==========================================================
+
+# Local environment
+.env.local
+.env.development
+.env.production
+
+# Generated reports
+outputs/*
+!outputs/.gitkeep
+
+# Runtime storage
+storage/cache/*
+!storage/cache/.gitkeep
+
+storage/memory/*
+!storage/memory/.gitkeep
+
+storage/reports/*
+!storage/reports/.gitkeep
+
+storage/sessions/*
+!storage/sessions/.gitkeep
+
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Notebook outputs
+notebook/*.html
+notebook/*.pdf
+
+# Local datasets
+sample_data/private/*
+!sample_data/private/.gitkeep
+
+# Generated diagrams
+assets/diagrams/generated/*
+
+# Local IDE settings
+.history/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Keep template
+!.env.example
