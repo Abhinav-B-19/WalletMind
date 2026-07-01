@@ -1,12 +1,15 @@
 ﻿# Runtime dependencies
+fastapi>=0.115.0
 pydantic>=2.8
 sqlalchemy>=2.0
+uvicorn>=0.30.0
 
 # Development tooling
 black>=24.0
 ruff>=0.5.0
 
 # Testing
+httpx2>=0.28.1
 pytest>=8.0
 
 # Future agent integration
