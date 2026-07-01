@@ -1,0 +1,13 @@
+﻿# Runtime dependencies
+# Keep empty until application code introduces runtime requirements.
+
+# Development tooling
+black>=24.0
+ruff>=0.5.0
+
+# Testing
+pytest>=8.0
+
+# Future agent integration
+# Install when ADK-backed application code is introduced:
+# google-adk>=1.0.0
