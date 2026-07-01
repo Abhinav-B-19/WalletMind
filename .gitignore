@@ -3,6 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Virtual environments
+.venv/
+venv/
+env/
+
 # C extensions
 *.so
 
@@ -35,6 +40,11 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+
+# Jupyter
+.ipynb_checkpoints/
+
 
 # Unit test / coverage reports
 htmlcov/
