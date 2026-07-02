@@ -8,6 +8,7 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from backend.app.database.init_db import init_database
 from backend.app.database.session import create_database_engine, create_session_factory
@@ -80,15 +81,23 @@ def test_statement_user_relationship_roundtrip() -> None:
         session.commit()
         session.refresh(statement)
 
-        loaded_statement = session.scalar(select(Statement).where(Statement.id == statement.id))
-        loaded_user = session.scalar(select(User).where(User.id == user.id))
+        loaded_statement = session.scalar(
+            select(Statement)
+            .options(selectinload(Statement.user))
+            .where(Statement.id == statement.id)
+        )
+        loaded_user = session.scalar(
+            select(User)
+            .options(selectinload(User.statements))
+            .where(User.id == user.id)
+        )
 
-    assert loaded_statement is not None
-    assert loaded_user is not None
-    assert loaded_statement.user is not None
-    assert loaded_statement.user.id == loaded_user.id
-    assert len(loaded_user.statements) == 1
-    assert loaded_user.statements[0].id == loaded_statement.id
+        assert loaded_statement is not None
+        assert loaded_user is not None
+        assert loaded_statement.user is not None
+        assert loaded_statement.user.id == loaded_user.id
+        assert len(loaded_user.statements) == 1
+        assert loaded_user.statements[0].id == loaded_statement.id
 
 
 def test_statement_rows_are_deleted_when_user_is_deleted() -> None:
