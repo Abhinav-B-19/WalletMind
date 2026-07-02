@@ -66,11 +66,13 @@ def test_statement_upload_endpoint(tmp_path) -> None:
 
     assert response.status_code == 201
     body = response.json()
-    assert body["statement_uuid"]
-    assert body["original_filename"] == "june.csv"
-    assert body["file_type"] == "csv"
-    assert body["analysis_status"] == "uploaded"
-    assert body["status"] == "uploaded"
+    assert body["success"] is True
+    assert body["message"] == "Statement uploaded successfully."
+    assert body["data"]["statement_uuid"]
+    assert body["data"]["original_filename"] == "june.csv"
+    assert body["data"]["file_type"] == "csv"
+    assert body["data"]["analysis_status"] == "uploaded"
+    assert body["data"]["status"] == "uploaded"
 
 
 def test_statement_list_endpoint(tmp_path) -> None:
@@ -87,9 +89,11 @@ def test_statement_list_endpoint(tmp_path) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert isinstance(body, list)
-    assert len(body) == 1
-    assert body[0]["original_filename"] == "june.csv"
+    assert body["success"] is True
+    assert body["message"] == "Statements retrieved successfully."
+    assert isinstance(body["data"], list)
+    assert len(body["data"]) == 1
+    assert body["data"][0]["original_filename"] == "june.csv"
 
 
 def test_statement_list_endpoint_filters_by_user_uuid(tmp_path) -> None:
@@ -122,8 +126,10 @@ def test_statement_list_endpoint_filters_by_user_uuid(tmp_path) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body) == 1
-    assert body[0]["original_filename"] == "u1.csv"
+    assert body["success"] is True
+    assert body["message"] == "Statements retrieved successfully."
+    assert len(body["data"]) == 1
+    assert body["data"][0]["original_filename"] == "u1.csv"
 
 
 def test_statement_upload_list_delete_workflow(tmp_path) -> None:
@@ -136,20 +142,30 @@ def test_statement_upload_list_delete_workflow(tmp_path) -> None:
         files={"file": ("workflow.csv", b"date,amount\n2026-08-01,500\n", "text/csv")},
     )
     assert upload_response.status_code == 201
-    statement_uuid = upload_response.json()["statement_uuid"]
+    statement_uuid = upload_response.json()["data"]["statement_uuid"]
 
     list_response = client.get("/api/v1/statements")
     assert list_response.status_code == 200
     listed = list_response.json()
-    assert len(listed) == 1
-    assert listed[0]["statement_uuid"] == statement_uuid
+    assert listed["success"] is True
+    assert listed["message"] == "Statements retrieved successfully."
+    assert len(listed["data"]) == 1
+    assert listed["data"][0]["statement_uuid"] == statement_uuid
 
     delete_response = client.delete(f"/api/v1/statements/{statement_uuid}")
-    assert delete_response.status_code == 204
+    assert delete_response.status_code == 200
+    delete_body = delete_response.json()
+    assert delete_body["success"] is True
+    assert delete_body["message"] == "Statement deleted successfully."
+    assert delete_body["data"]["statement_uuid"] == statement_uuid
+    assert delete_body["data"]["status"] == "deleted"
 
     list_after_delete_response = client.get("/api/v1/statements")
     assert list_after_delete_response.status_code == 200
-    assert list_after_delete_response.json() == []
+    list_after_delete_body = list_after_delete_response.json()
+    assert list_after_delete_body["success"] is True
+    assert list_after_delete_body["message"] == "Statements retrieved successfully."
+    assert list_after_delete_body["data"] == []
 
 
 def test_statement_get_endpoint(tmp_path) -> None:
@@ -161,14 +177,16 @@ def test_statement_get_endpoint(tmp_path) -> None:
         data={"user_uuid": user.uuid},
         files={"file": ("july.xlsx", b"PK\x03\x04xlsx-content", "application/vnd.ms-excel")},
     )
-    statement_uuid = upload_response.json()["statement_uuid"]
+    statement_uuid = upload_response.json()["data"]["statement_uuid"]
 
     response = client.get(f"/api/v1/statements/{statement_uuid}")
 
     assert response.status_code == 200
     body = response.json()
-    assert body["statement_uuid"] == statement_uuid
-    assert body["original_filename"] == "july.xlsx"
+    assert body["success"] is True
+    assert body["message"] == "Statement retrieved successfully."
+    assert body["data"]["statement_uuid"] == statement_uuid
+    assert body["data"]["original_filename"] == "july.xlsx"
 
 
 def test_statement_delete_endpoint(tmp_path) -> None:
@@ -180,18 +198,25 @@ def test_statement_delete_endpoint(tmp_path) -> None:
         data={"user_uuid": user.uuid},
         files={"file": ("aug.csv", b"date,amount\n2026-08-01,200\n", "text/csv")},
     )
-    body = upload_response.json()
+    body = upload_response.json()["data"]
     statement_uuid = body["statement_uuid"]
     stored_filename = body["stored_filename"]
 
     delete_response = client.delete(f"/api/v1/statements/{statement_uuid}")
 
-    assert delete_response.status_code == 204
+    assert delete_response.status_code == 200
+    delete_body = delete_response.json()
+    assert delete_body["success"] is True
+    assert delete_body["message"] == "Statement deleted successfully."
+    assert delete_body["data"]["statement_uuid"] == statement_uuid
+    assert delete_body["data"]["status"] == "deleted"
     assert not (tmp_path / "uploads" / stored_filename).exists()
 
     get_response = client.get(f"/api/v1/statements/{statement_uuid}")
     assert get_response.status_code == 404
-    assert get_response.json()["code"] == "STATEMENT_NOT_FOUND"
+    get_error = get_response.json()
+    assert get_error["success"] is False
+    assert get_error["code"] == "STATEMENT_NOT_FOUND"
 
 
 def test_create_user_then_upload_statement_uses_same_database() -> None:
@@ -207,7 +232,7 @@ def test_create_user_then_upload_statement_uses_same_database() -> None:
         },
     )
     assert create_user_response.status_code == 201
-    user_uuid = create_user_response.json()["id"]
+    user_uuid = create_user_response.json()["data"]["id"]
 
     upload_response = client.post(
         "/api/v1/statements/upload",
@@ -215,7 +240,7 @@ def test_create_user_then_upload_statement_uses_same_database() -> None:
         files={"file": ("income.csv", b"date,amount\n2026-07-01,300\n", "text/csv")},
     )
     assert upload_response.status_code == 201
-    statement_uuid = upload_response.json()["statement_uuid"]
+    statement_uuid = upload_response.json()["data"]["statement_uuid"]
 
     with SessionLocal() as session:
         users = session.scalars(select(User)).all()

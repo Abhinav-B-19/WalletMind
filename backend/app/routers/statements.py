@@ -5,10 +5,10 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
-from fastapi.responses import Response
 
 from backend.app.api.dependencies import get_statement_upload_service
 from backend.app.api.schemas import ErrorResponse
+from backend.app.schemas.response import ApiResponse, DeleteStatusData
 from walletmind.schemas.statement import UploadResponseDTO
 from walletmind.services.statement_upload_service import StatementUploadService
 
@@ -26,7 +26,7 @@ error_responses = {
 
 @router.post(
     "/upload",
-    response_model=UploadResponseDTO,
+    response_model=ApiResponse[UploadResponseDTO],
     status_code=status.HTTP_201_CREATED,
     responses=error_responses,
 )
@@ -34,57 +34,64 @@ async def upload_statement(
     user_uuid: UUID = Form(...),
     file: UploadFile = File(...),
     service: StatementUploadService = Depends(get_statement_upload_service),
-) -> UploadResponseDTO:
+) -> ApiResponse[UploadResponseDTO]:
     """Upload a statement file and persist metadata."""
 
     file_bytes = await file.read()
-    return service.upload_statement(
+    statement = service.upload_statement(
         user_uuid=user_uuid,
         original_filename=file.filename or "",
         file_bytes=file_bytes,
     )
+    return ApiResponse(message="Statement uploaded successfully.", data=statement)
 
 
 @router.get(
     "",
-    response_model=list[UploadResponseDTO],
+    response_model=ApiResponse[list[UploadResponseDTO]],
     status_code=status.HTTP_200_OK,
     responses=error_responses,
 )
 def list_statements(
     user_uuid: UUID | None = None,
     service: StatementUploadService = Depends(get_statement_upload_service),
-) -> list[UploadResponseDTO]:
+) -> ApiResponse[list[UploadResponseDTO]]:
     """List all uploaded statement metadata records."""
 
-    return service.list_statements(user_uuid=user_uuid)
+    statements = service.list_statements(user_uuid=user_uuid)
+    return ApiResponse(message="Statements retrieved successfully.", data=statements)
 
 
 @router.get(
     "/{statement_uuid}",
-    response_model=UploadResponseDTO,
+    response_model=ApiResponse[UploadResponseDTO],
     status_code=status.HTTP_200_OK,
     responses=error_responses,
 )
 def get_statement(
     statement_uuid: UUID,
     service: StatementUploadService = Depends(get_statement_upload_service),
-) -> UploadResponseDTO:
+) -> ApiResponse[UploadResponseDTO]:
     """Get metadata for a single uploaded statement."""
 
-    return service.get_statement(statement_uuid)
+    statement = service.get_statement(statement_uuid)
+    return ApiResponse(message="Statement retrieved successfully.", data=statement)
 
 
 @router.delete(
     "/{statement_uuid}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=ApiResponse[DeleteStatusData],
+    status_code=status.HTTP_200_OK,
     responses=error_responses,
 )
 def delete_statement(
     statement_uuid: UUID,
     service: StatementUploadService = Depends(get_statement_upload_service),
-) -> Response:
+) -> ApiResponse[DeleteStatusData]:
     """Delete statement metadata and the uploaded file."""
 
     service.delete_statement(statement_uuid)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return ApiResponse(
+        message="Statement deleted successfully.",
+        data=DeleteStatusData(statement_uuid=str(statement_uuid)),
+    )

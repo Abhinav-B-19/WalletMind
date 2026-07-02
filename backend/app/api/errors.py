@@ -28,6 +28,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=404,
             content={
+                "success": False,
                 "code": "USER_NOT_FOUND",
                 "message": str(exc),
                 "details": None,
@@ -41,6 +42,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=409,
             content={
+                "success": False,
                 "code": "DUPLICATE_USER",
                 "message": str(exc),
                 "details": None,
@@ -54,6 +56,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=422,
             content={
+                "success": False,
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
                 "details": jsonable_encoder(exc.errors()),
@@ -67,6 +70,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=415,
             content={
+                "success": False,
                 "code": "UNSUPPORTED_FILE_TYPE",
                 "message": str(exc),
                 "details": None,
@@ -78,6 +82,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=400,
             content={
+                "success": False,
                 "code": "EMPTY_FILE",
                 "message": str(exc),
                 "details": None,
@@ -91,6 +96,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=413,
             content={
+                "success": False,
                 "code": "FILE_TOO_LARGE",
                 "message": str(exc),
                 "details": None,
@@ -104,6 +110,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=404,
             content={
+                "success": False,
                 "code": "STATEMENT_NOT_FOUND",
                 "message": str(exc),
                 "details": None,
@@ -117,6 +124,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=500,
             content={
+                "success": False,
                 "code": "STATEMENT_STORAGE_ERROR",
                 "message": str(exc),
                 "details": None,
