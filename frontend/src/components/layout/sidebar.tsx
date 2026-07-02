@@ -1,8 +1,8 @@
 import {
   Bot,
+  CircleDollarSign,
   FileStack,
   Home,
-  LayoutDashboard,
   LogOut,
   Settings,
   Timer,
@@ -10,15 +10,16 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { clearStoredUser } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { to: "/app/home", label: "Home", icon: Home },
+  { to: "/app/home", label: "Home", icon: Home, comingSoon: false },
   { to: "/app/statements", label: "Statements", icon: FileStack },
-  { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/planner", label: "Planner", icon: Timer },
-  { to: "/app/chat", label: "AI Assistant", icon: Bot },
+  { to: "/app/dashboard", label: "Budgets", icon: CircleDollarSign, comingSoon: true },
+  { to: "/app/planner", label: "Planner", icon: Timer, comingSoon: true },
+  { to: "/app/chat", label: "AI Assistant", icon: Bot, comingSoon: true },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -46,24 +47,27 @@ export function Sidebar() {
         </div>
         <nav aria-label="Primary" className="flex-1">
           <ul className="space-y-1">
-            {links.map(({ to, label, icon: Icon }) => (
+            {links.map(({ to, label, icon: Icon, comingSoon }) => (
               <li key={label}>
                 <NavLink
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-[var(--text-muted)] transition-colors",
+                      "flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-[var(--text-muted)] transition-colors",
                       isActive
                         ? "bg-[var(--primary-soft)] text-[var(--text)]"
                         : "hover:bg-[var(--surface)]",
                     )
                   }
                 >
-                  <Icon
-                    className="h-[var(--icon-md)] w-[var(--icon-md)]"
-                    aria-hidden="true"
-                  />
-                  {label}
+                  <span className="flex items-center gap-3">
+                    <Icon
+                      className="h-[var(--icon-md)] w-[var(--icon-md)]"
+                      aria-hidden="true"
+                    />
+                    {label}
+                  </span>
+                  {comingSoon ? <Badge variant="muted">Coming Soon</Badge> : null}
                 </NavLink>
               </li>
             ))}

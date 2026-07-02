@@ -30,9 +30,5 @@ export function validateRegistrationForm(
     errors.primaryFinancialGoal = "Please select a primary financial goal.";
   }
 
-  if (!data.termsAccepted) {
-    errors.termsAccepted = "You must accept Terms & Conditions to continue.";
-  }
-
   return errors;
 }

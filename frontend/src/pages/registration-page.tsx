@@ -26,8 +26,6 @@ const FINANCIAL_GOALS = [
   "Retirement Planning",
   "Travel Fund",
 ];
-const LANGUAGES = ["English", "Hindi", "Spanish", "French"];
-const NOTIFICATION_OPTIONS = ["Email", "SMS", "Push Notifications", "None"];
 
 const EMPTY_FORM: RegistrationFormData = {
   fullName: "",
@@ -35,9 +33,6 @@ const EMPTY_FORM: RegistrationFormData = {
   monthlyIncome: "",
   currency: "",
   primaryFinancialGoal: "",
-  preferredLanguage: "",
-  notificationPreference: "",
-  termsAccepted: false,
 };
 
 export function RegistrationPage() {
@@ -246,89 +241,6 @@ export function RegistrationPage() {
                     ) : null}
                   </div>
                 </div>
-              </section>
-
-              <section className="space-y-4">
-                <SectionTitle
-                  title="Preferences"
-                  subtitle="Optional settings for communication and language."
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor="preferredLanguage"
-                    >
-                      Preferred Language (optional)
-                    </label>
-                    <Select
-                      id="preferredLanguage"
-                      value={formData.preferredLanguage}
-                      onChange={(event) =>
-                        updateField("preferredLanguage", event.target.value)
-                      }
-                    >
-                      <option value="">Select language</option>
-                      {LANGUAGES.map((language) => (
-                        <option key={language} value={language}>
-                          {language}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor="notificationPreference"
-                    >
-                      Notification Preference (optional)
-                    </label>
-                    <Select
-                      id="notificationPreference"
-                      value={formData.notificationPreference}
-                      onChange={(event) =>
-                        updateField(
-                          "notificationPreference",
-                          event.target.value,
-                        )
-                      }
-                    >
-                      <option value="">Select preference</option>
-                      {NOTIFICATION_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <SectionTitle
-                  title="Terms"
-                  subtitle="Review and accept the onboarding agreement."
-                />
-                <label className="flex items-start gap-2 text-sm text-[var(--text-muted)]">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={formData.termsAccepted}
-                    onChange={(event) =>
-                      updateField("termsAccepted", event.target.checked)
-                    }
-                  />
-                  <span>
-                    I agree to WalletMind Terms & Conditions and understand this
-                    onboarding profile is stored locally for this release.
-                  </span>
-                </label>
-                {errors.termsAccepted ? (
-                  <p className="mt-1 text-xs text-[var(--danger)]">
-                    {errors.termsAccepted}
-                  </p>
-                ) : null}
               </section>
 
               {submitError ? (
