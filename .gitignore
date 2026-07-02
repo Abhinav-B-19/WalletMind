@@ -182,7 +182,7 @@ pnpm-lock.yaml
 # Runtime data
 storage/database/*
 !storage/database/.gitkeep
-storage/database/*.db
+storage/database/walletmind.db
 
 storage/uploads/*
 !storage/uploads/.gitkeep
