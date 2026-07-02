@@ -5,6 +5,8 @@ export type StoredWalletMindUser = {
   name: string;
   occupation: string;
   monthly_income: number;
+  currency: string;
+  primary_financial_goal?: string | null;
 };
 
 export function getStoredUser(): StoredWalletMindUser | null {

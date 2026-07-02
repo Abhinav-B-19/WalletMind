@@ -8,6 +8,8 @@ const userDataSchema = z.object({
   name: z.string(),
   occupation: z.string(),
   monthly_income: z.number(),
+  currency: z.string(),
+  primary_financial_goal: z.string().nullable().optional(),
 });
 
 const userEnvelopeSchema = z.object({
@@ -24,6 +26,8 @@ export async function submitRegistration(
       name: data.fullName,
       occupation: data.occupation,
       monthly_income: Number(data.monthlyIncome),
+      currency: data.currency,
+      primary_financial_goal: data.primaryFinancialGoal,
     });
 
     const parsed = userEnvelopeSchema.parse(response.data);

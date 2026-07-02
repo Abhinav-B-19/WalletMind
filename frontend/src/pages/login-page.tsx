@@ -69,7 +69,9 @@ export function LoginPage() {
                   <p className="text-xs text-[var(--text-muted)]">
                     Primary Goal
                   </p>
-                  <p className="text-sm font-medium">Financial Planning</p>
+                  <p className="text-sm font-medium">
+                    {user.primary_financial_goal ?? "Not set"}
+                  </p>
                 </div>
               </div>
 

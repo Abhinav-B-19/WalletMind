@@ -5,9 +5,10 @@ import { AppStatementsPage } from "@/pages/app-statements-page";
 import * as statementsApi from "@/lib/api/statements";
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
 
   return {
     ...actual,
@@ -55,6 +56,8 @@ describe("AppStatementsPage", () => {
         name: "Test User",
         occupation: "QA",
         monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
       }),
     );
   });
@@ -141,8 +144,6 @@ describe("AppStatementsPage", () => {
 
     render(<AppStatementsPage />);
 
-    expect(
-      await screen.findByText("No Statements Yet"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("No Statements Yet")).toBeInTheDocument();
   });
 });

@@ -7,9 +7,10 @@ import * as statementsApi from "@/lib/api/statements";
 const navigateMock = vi.fn();
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
 
   return {
     ...actual,
@@ -34,6 +35,8 @@ describe("AppStatementUploadPage", () => {
         name: "Test User",
         occupation: "QA",
         monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
       }),
     );
   });
@@ -58,16 +61,24 @@ describe("AppStatementUploadPage", () => {
 
     render(<AppStatementUploadPage />);
 
-    const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [createFile(longName)] } });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Statement Uploaded Successfully" }),
+      await screen.findByRole("heading", {
+        name: "Statement Uploaded Successfully",
+      }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("Your statement has been securely uploaded and is ready for AI analysis.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Your statement has been securely uploaded and is ready for AI analysis.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Filename")).toBeInTheDocument();
     expect(screen.getByText("File Size")).toBeInTheDocument();
     expect(screen.getByText("Parser Type")).toBeInTheDocument();
@@ -97,18 +108,26 @@ describe("AppStatementUploadPage", () => {
 
     render(<AppStatementUploadPage />);
 
-    const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
-    fireEvent.change(fileInput, { target: { files: [createFile("statement.csv")] } });
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("statement.csv")] },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
 
-    await screen.findByRole("heading", { name: "Statement Uploaded Successfully" });
+    await screen.findByRole("heading", {
+      name: "Statement Uploaded Successfully",
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Another" }));
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("heading", { name: "Statement Uploaded Successfully" }),
+        screen.queryByRole("heading", {
+          name: "Statement Uploaded Successfully",
+        }),
       ).not.toBeInTheDocument();
     });
 
@@ -132,14 +151,22 @@ describe("AppStatementUploadPage", () => {
 
     render(<AppStatementUploadPage />);
 
-    const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
-    fireEvent.change(fileInput, { target: { files: [createFile("statement.csv")] } });
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("statement.csv")] },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
 
-    await screen.findByRole("heading", { name: "Statement Uploaded Successfully" });
+    await screen.findByRole("heading", {
+      name: "Statement Uploaded Successfully",
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "View Statement Library" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "View Statement Library" }),
+    );
 
     expect(navigateMock).toHaveBeenCalledWith("/app/statements", {
       state: expect.objectContaining({ refreshToken: expect.any(Number) }),
@@ -178,13 +205,19 @@ describe("AppStatementUploadPage", () => {
 
     render(<AppStatementUploadPage />);
 
-    const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
-    fireEvent.change(fileInput, { target: { files: [createFile("statement.csv")] } });
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("statement.csv")] },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Duplicate Statement Detected" }),
+      await screen.findByRole("heading", {
+        name: "Duplicate Statement Detected",
+      }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -213,30 +246,40 @@ describe("AppStatementUploadPage", () => {
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
-    const uploadSpy = vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
-      statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f456",
-      original_filename: "statement.csv",
-      stored_filename: "stored.csv",
-      file_size: 77,
-      file_type: "csv",
-      parser_type: "csv",
-      bank_name: null,
-      analysis_status: "uploaded",
-      status: "uploaded",
-      uploaded_at: "2026-07-03T09:00:00.000Z",
-    });
+    const uploadSpy = vi
+      .spyOn(statementsApi, "uploadStatement")
+      .mockResolvedValue({
+        statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f456",
+        original_filename: "statement.csv",
+        stored_filename: "stored.csv",
+        file_size: 77,
+        file_type: "csv",
+        parser_type: "csv",
+        bank_name: null,
+        analysis_status: "uploaded",
+        status: "uploaded",
+        uploaded_at: "2026-07-03T09:00:00.000Z",
+      });
 
     render(<AppStatementUploadPage />);
 
-    const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
-    fireEvent.change(fileInput, { target: { files: [createFile("statement.csv")] } });
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("statement.csv")] },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
 
-    await screen.findByRole("heading", { name: "Duplicate Statement Detected" });
+    await screen.findByRole("heading", {
+      name: "Duplicate Statement Detected",
+    });
     fireEvent.click(screen.getByRole("button", { name: "Upload Anyway" }));
 
-    await screen.findByRole("heading", { name: "Statement Uploaded Successfully" });
+    await screen.findByRole("heading", {
+      name: "Statement Uploaded Successfully",
+    });
     expect(uploadSpy).toHaveBeenCalledTimes(1);
   });
 });

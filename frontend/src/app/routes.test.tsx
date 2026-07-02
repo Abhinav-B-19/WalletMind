@@ -9,7 +9,8 @@ vi.mock("@/context/global-loader-context", () => ({
     showLoader: () => undefined,
     hideLoader: () => undefined,
   }),
-  GlobalLoaderProvider: ({ children }: { children: React.ReactNode }) => children,
+  GlobalLoaderProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 describe("routing", () => {
@@ -25,6 +26,8 @@ describe("routing", () => {
         name: "Route Tester",
         occupation: "QA",
         monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
       }),
     );
 
@@ -35,7 +38,9 @@ describe("routing", () => {
     render(<RouterProvider router={router} />);
 
     expect(
-      await screen.findByRole("heading", { name: "Statement Upload Workspace" }),
+      await screen.findByRole("heading", {
+        name: "Statement Upload Workspace",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -47,6 +52,8 @@ describe("routing", () => {
         name: "Route Tester",
         occupation: "QA",
         monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
       }),
     );
 
@@ -71,6 +78,8 @@ describe("routing", () => {
     expect(
       await screen.findByRole("heading", { name: "WalletMind" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Get Started" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Get Started" }),
+    ).toBeInTheDocument();
   });
 });

@@ -80,8 +80,11 @@ export function WorkspacePage() {
           label="Monthly Income"
           value={user?.monthly_income ? `${user.monthly_income}` : "Not set"}
         />
-        <StatCard label="Currency" value="USD" />
-        <StatCard label="Primary Financial Goal" value="Financial Planning" />
+        <StatCard label="Currency" value={user?.currency ?? "Not set"} />
+        <StatCard
+          label="Primary Financial Goal"
+          value={user?.primary_financial_goal ?? "Not set"}
+        />
         <StatCard label="Registered Since" value={registrationDate} />
       </section>
 
