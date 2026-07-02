@@ -13,7 +13,8 @@ import { useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -133,6 +134,8 @@ export function AppStatementsPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [statementPendingDelete, setStatementPendingDelete] =
+    useState<UploadedStatement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<FilterOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -277,15 +280,12 @@ export function AppStatementsPage() {
     };
   }, [statements]);
 
-  const handleDelete = async (statement: UploadedStatement) => {
-    const shouldDelete = window.confirm(
-      `Delete ${statement.original_filename}? This action cannot be undone.`,
-    );
-
-    if (!shouldDelete) {
+  const confirmDelete = async () => {
+    if (!statementPendingDelete) {
       return;
     }
 
+    const statement = statementPendingDelete;
     setIsDeleting(statement.statement_uuid);
     setSuccessMessage(null);
 
@@ -304,6 +304,7 @@ export function AppStatementsPage() {
       );
     } finally {
       setIsDeleting(null);
+      setStatementPendingDelete(null);
     }
   };
 
@@ -346,7 +347,8 @@ export function AppStatementsPage() {
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by filename, parser, or bank"
+                placeholder="Search statements..."
+                aria-label="Search statements"
                 className="flex h-10 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-9 py-2 text-sm text-[var(--text)] shadow-[var(--shadow-inset)] outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
               />
             </label>
@@ -358,6 +360,7 @@ export function AppStatementsPage() {
                 onChange={(event) =>
                   setFilter(event.target.value as FilterOption)
                 }
+                aria-label="Filter statements"
                 className="bg-transparent text-sm text-[var(--text)] outline-none"
               >
                 {FILTER_OPTIONS.map((option) => (
@@ -375,6 +378,7 @@ export function AppStatementsPage() {
                 onChange={(event) =>
                   setSortBy(event.target.value as SortOption)
                 }
+                aria-label="Sort statements"
                 className="bg-transparent text-sm text-[var(--text)] outline-none"
               >
                 <option value="newest">Newest</option>
@@ -440,12 +444,15 @@ export function AppStatementsPage() {
                       return (
                         <tr
                           key={statement.statement_uuid}
-                          className="align-top"
+                          className="align-middle transition-colors hover:bg-[var(--surface-soft)]/50"
                         >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
+                          <td className="max-w-[280px] px-4 py-3">
+                            <div className="flex min-w-0 items-center gap-2">
                               <Icon className="h-[var(--icon-sm)] w-[var(--icon-sm)] text-[var(--text-muted)]" />
-                              <span className="font-medium">
+                              <span
+                                className="block truncate font-medium"
+                                title={statement.original_filename}
+                              >
                                 {statement.original_filename}
                               </span>
                             </div>
@@ -481,7 +488,7 @@ export function AppStatementsPage() {
                                 disabled={
                                   isDeleting === statement.statement_uuid
                                 }
-                                onClick={() => void handleDelete(statement)}
+                                onClick={() => setStatementPendingDelete(statement)}
                               >
                                 <Trash2 className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
                                 Delete
@@ -507,7 +514,10 @@ export function AppStatementsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Icon className="h-[var(--icon-sm)] w-[var(--icon-sm)] text-[var(--text-muted)]" />
-                        <p className="text-sm font-semibold">
+                        <p
+                          className="max-w-[12rem] truncate text-sm font-semibold"
+                          title={statement.original_filename}
+                        >
                           {statement.original_filename}
                         </p>
                       </div>
@@ -548,7 +558,7 @@ export function AppStatementsPage() {
                         type="button"
                         className="flex-1"
                         disabled={isDeleting === statement.statement_uuid}
-                        onClick={() => void handleDelete(statement)}
+                        onClick={() => setStatementPendingDelete(statement)}
                       >
                         <Trash2 className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
                         Delete
@@ -561,6 +571,25 @@ export function AppStatementsPage() {
           </div>
         </section>
       ) : null}
+
+      <ConfirmationDialog
+        open={Boolean(statementPendingDelete)}
+        title="Delete Statement"
+        description={
+          statementPendingDelete
+            ? `Delete ${statementPendingDelete.original_filename}? This action cannot be undone.`
+            : "Delete this statement?"
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        variant="danger"
+        onCancel={() => setStatementPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
+        isConfirming={Boolean(
+          statementPendingDelete &&
+            isDeleting === statementPendingDelete.statement_uuid,
+        )}
+      />
     </div>
   );
 }

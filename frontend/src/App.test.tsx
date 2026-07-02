@@ -9,14 +9,13 @@ describe("App Shell", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Welcome to WalletMind",
+        name: "WalletMind",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        name: "Get Started",
-        level: 3,
-      }),
+      screen.getByText(
+        "Transform your bank statements into personalized financial insights powered by AI.",
+      ),
     ).toBeInTheDocument();
   });
 

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
-  CheckCircle2,
   FileSpreadsheet,
   FileText,
   Image,
@@ -12,10 +11,11 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ErrorState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
-import { PageTitle, SectionTitle } from "@/components/ui/section-title";
+import { PageTitle } from "@/components/ui/section-title";
 import { getStoredUser } from "@/lib/auth/storage";
 import {
   listStatements,
@@ -475,51 +475,55 @@ export function AppStatementUploadPage() {
         }
       >
         {uploadResult ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardContent className="space-y-1 p-4">
+          <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">Filename</p>
-                <p className="text-sm font-semibold">
+                <p
+                  className="truncate text-sm font-semibold"
+                  title={uploadResult.original_filename}
+                  aria-label={`Full filename: ${uploadResult.original_filename}`}
+                >
                   {uploadResult.original_filename}
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-1 p-4">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">File Size</p>
                 <p className="text-sm font-semibold">
                   {formatFileSize(uploadResult.file_size)}
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-1 p-4">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">Parser Type</p>
-                <p className="text-sm font-semibold">
+                <p className="truncate text-sm font-semibold" title={uploadResult.parser_type}>
                   {uploadResult.parser_type}
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-1 p-4">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">Upload Time</p>
                 <p className="text-sm font-semibold">
                   {new Date(uploadResult.uploaded_at).toLocaleString()}
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-1 p-4">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">
                   Analysis Status
                 </p>
-                <p className="text-sm font-semibold capitalize">
+                <p className="truncate text-sm font-semibold capitalize" title={uploadResult.analysis_status}>
                   {uploadResult.analysis_status}
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-1 p-4">
+            <Card className="h-full min-w-0">
+              <CardContent className="flex h-full min-w-0 flex-col justify-between space-y-1 p-4">
                 <p className="text-xs text-[var(--text-muted)]">Readiness</p>
                 <Badge className="mt-1">Ready for Analysis</Badge>
               </CardContent>
@@ -528,27 +532,15 @@ export function AppStatementUploadPage() {
         ) : null}
       </Dialog>
 
-      <Dialog
+      <ConfirmationDialog
         open={isDuplicateDialogOpen}
         title="Duplicate Statement Detected"
-        description={`A statement named "${duplicateFilename}" already exists in your WalletMind library. Uploading another copy may create duplicate records.`}
-        actions={
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleDuplicateCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleDuplicateUploadAnyway()}
-            >
-              Upload Anyway
-            </Button>
-          </>
-        }
+        description="A statement with this filename already exists. Uploading another copy may create duplicate records."
+        cancelLabel="Cancel"
+        confirmLabel="Upload Anyway"
+        variant="warning"
+        onCancel={handleDuplicateCancel}
+        onConfirm={() => void handleDuplicateUploadAnyway()}
       />
     </div>
   );
