@@ -81,8 +81,11 @@ def test_statement_upload_endpoint(tmp_path) -> None:
     assert body["data"]["statement_uuid"]
     assert body["data"]["original_filename"] == "june.csv"
     assert body["data"]["file_type"] == "csv"
-    assert body["data"]["analysis_status"] == "queued"
-    assert body["data"]["status"] == "queued"
+    assert body["data"]["analysis_status"] == "ready_for_parsing"
+    assert body["data"]["status"] == "ready_for_parsing"
+    assert body["data"]["classification_confidence"] is not None
+    assert body["data"]["classification_method"] is not None
+    assert body["data"]["classified_at"] is not None
 
 
 def test_statement_list_endpoint(tmp_path) -> None:
@@ -280,7 +283,7 @@ def test_upload_pipeline_transitions_to_ready_for_parsing(tmp_path) -> None:
 
     assert response.status_code == 201
     statement_uuid = response.json()["data"]["statement_uuid"]
-    assert response.json()["data"]["status"] == "queued"
+    assert response.json()["data"]["status"] == "ready_for_parsing"
 
     with session_factory() as session:
         statement = session.scalar(select(Statement).where(Statement.uuid == statement_uuid))
@@ -288,9 +291,12 @@ def test_upload_pipeline_transitions_to_ready_for_parsing(tmp_path) -> None:
     assert statement is not None
     assert statement.status.value == "ready_for_parsing"
     assert statement.detected_file_type == "csv"
-    assert statement.parser_type == "csv"
+    assert statement.parser_type == "generic_excel_parser"
     assert statement.processing_started_at is not None
     assert statement.processing_completed_at is not None
+    assert statement.classification_confidence is not None
+    assert statement.classification_method is not None
+    assert statement.classified_at is not None
 
 
 def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
@@ -304,12 +310,14 @@ def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
             background_tasks,
             statement_uuid,
             original_filename: str,
+            stored_file_path: str,
             content_type: str | None = None,
         ) -> None:
             self.calls.append(
                 {
                     "statement_uuid": str(statement_uuid),
                     "original_filename": original_filename,
+                    "stored_file_path": stored_file_path,
                     "content_type": content_type,
                 }
             )
@@ -331,3 +339,93 @@ def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
     assert len(spy_dispatcher.calls) == 1
     assert spy_dispatcher.calls[0]["original_filename"] == "dispatch.csv"
     assert spy_dispatcher.calls[0]["content_type"] == "text/csv"
+    assert spy_dispatcher.calls[0]["stored_file_path"]
+
+
+def test_upload_axis_statement_classified_with_axis_parser(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={
+            "file": (
+                "axis_statement.csv",
+                b"Tran Date,Particulars,CR/DR,Balance\n2026-07-01,Salary,CR,10000\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()["data"]
+    assert body["bank_name"] == "Axis Bank"
+    assert body["parser_type"] == "axis_excel_parser"
+    assert body["status"] == "ready_for_parsing"
+
+
+def test_upload_tmb_statement_classified_with_tmb_parser(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={
+            "file": (
+                "tmb_statement.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-07-01,ATM,200,0\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()["data"]
+    assert body["bank_name"] == "Tamilnad Mercantile Bank (TMB)"
+    assert body["parser_type"] == "tmb_excel_parser"
+
+
+def test_upload_canara_statement_classified_with_canara_parser(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={
+            "file": (
+                "canara_statement.csv",
+                b"Txn Date,Description,Debit,Credit,Balance\n2026-07-01,UPI,200,0,900\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()["data"]
+    assert body["bank_name"] == "Canara Bank"
+    assert body["parser_type"] == "canara_excel_parser"
+
+
+def test_upload_unknown_statement_classified_with_generic_parser(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={
+            "file": (
+                "unknown_statement.csv",
+                b"col1,col2,col3\n1,2,3\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()["data"]
+    assert body["bank_name"] == "Unknown"
+    assert body["parser_type"] == "generic_excel_parser"

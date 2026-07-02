@@ -56,6 +56,9 @@ def test_database_initialization_creates_user_table() -> None:
         "file_size",
         "detected_file_type",
         "parser_type",
+        "classification_confidence",
+        "classification_method",
+        "classified_at",
         "status",
         "processing_started_at",
         "processing_completed_at",
@@ -132,7 +135,7 @@ def test_init_database_reconciles_stale_statement_schema(tmp_path: Path) -> None
                 bank_name VARCHAR(120),
                 file_type VARCHAR(32) NOT NULL,
                 file_size INTEGER NOT NULL,
-                status VARCHAR(10) NOT NULL,
+                status VARCHAR(32) NOT NULL,
                 uploaded_at DATETIME,
                 updated_at DATETIME,
                 FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -150,6 +153,9 @@ def test_init_database_reconciles_stale_statement_schema(tmp_path: Path) -> None
     assert {
         "detected_file_type",
         "parser_type",
+        "classification_confidence",
+        "classification_method",
+        "classified_at",
         "processing_started_at",
         "processing_completed_at",
         "processing_error",

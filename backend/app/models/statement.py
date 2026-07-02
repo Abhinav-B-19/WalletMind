@@ -19,8 +19,10 @@ if TYPE_CHECKING:
 class StatementStatus(str, Enum):
     """Supported lifecycle states for uploaded statements."""
 
-    UPLOADED = "uploaded"
     QUEUED = "queued"
+    UPLOADED = "uploaded"
+    CLASSIFYING = "classifying"
+    CLASSIFIED = "classified"
     PROCESSING = "processing"
     READY_FOR_PARSING = "ready_for_parsing"
     PARSED = "parsed"
@@ -63,6 +65,12 @@ class Statement(Base):
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     detected_file_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     parser_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    classification_confidence: Mapped[float | None] = mapped_column(nullable=True)
+    classification_method: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    classified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     status: Mapped[StatementStatus] = mapped_column(
         SAEnum(StatementStatus, native_enum=False),
         default=StatementStatus.UPLOADED,

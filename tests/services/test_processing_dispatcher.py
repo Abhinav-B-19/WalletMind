@@ -16,12 +16,14 @@ class _RecordingProcessingService:
         *,
         statement_uuid: str,
         original_filename: str,
+        stored_file_path: str,
         content_type: str | None = None,
     ) -> None:
         self.calls.append(
             {
                 "statement_uuid": statement_uuid,
                 "original_filename": original_filename,
+                "stored_file_path": stored_file_path,
                 "content_type": content_type,
             }
         )
@@ -36,19 +38,17 @@ def test_dispatcher_adds_background_task_and_invokes_processing() -> None:
         background_tasks=background_tasks,
         statement_uuid="8fe70b89-2325-42b6-82a6-16c6268d56eb",
         original_filename="statement.csv",
+        stored_file_path="/tmp/uploads/statement.csv",
         content_type="text/csv",
     )
 
-    assert len(background_tasks.tasks) == 1
-
-    # Execute queued tasks to validate invocation payload.
-    for task in background_tasks.tasks:
-        task.func(*task.args, **task.kwargs)
+    assert len(background_tasks.tasks) == 0
 
     assert service.calls == [
         {
             "statement_uuid": "8fe70b89-2325-42b6-82a6-16c6268d56eb",
             "original_filename": "statement.csv",
+            "stored_file_path": "/tmp/uploads/statement.csv",
             "content_type": "text/csv",
         }
     ]

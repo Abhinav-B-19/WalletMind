@@ -192,16 +192,24 @@ class StatementUploadService:
             return value
         return UUID(str(value))
 
-    @staticmethod
-    def _to_upload_response(statement: Statement, *, parser_type: str) -> UploadResponseDTO:
+    def _to_upload_response(
+        self,
+        statement: Statement,
+        *,
+        parser_type: str,
+    ) -> UploadResponseDTO:
         return UploadResponseDTO(
             statement_uuid=UUID(statement.uuid),
+            stored_file_path=str((self._upload_dir / statement.stored_filename).resolve()),
             original_filename=statement.original_filename,
             stored_filename=statement.stored_filename,
             file_size=statement.file_size,
             file_type=statement.file_type,
             parser_type=statement.parser_type or parser_type,
             bank_name=statement.bank_name,
+            classification_confidence=statement.classification_confidence,
+            classification_method=statement.classification_method,
+            classified_at=statement.classified_at,
             analysis_status=statement.status,
             status=statement.status,
             uploaded_at=statement.uploaded_at,

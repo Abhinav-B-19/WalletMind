@@ -53,9 +53,11 @@ async def upload_statement(
         background_tasks=background_tasks,
         statement_uuid=statement.statement_uuid,
         original_filename=statement.original_filename,
+        stored_file_path=statement.stored_file_path or "",
         content_type=file.content_type,
     )
-    return ApiResponse(message="Statement uploaded successfully.", data=statement)
+    refreshed_statement = service.get_statement(statement.statement_uuid)
+    return ApiResponse(message="Statement uploaded successfully.", data=refreshed_statement)
 
 
 @router.get(

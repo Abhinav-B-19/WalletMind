@@ -41,6 +41,9 @@ def _reconcile_sqlite_statement_schema(database_engine: Engine) -> None:
     missing_columns = {
         "detected_file_type": "VARCHAR(32)",
         "parser_type": "VARCHAR(32)",
+        "classification_confidence": "FLOAT",
+        "classification_method": "VARCHAR(120)",
+        "classified_at": "DATETIME",
         "processing_started_at": "DATETIME",
         "processing_completed_at": "DATETIME",
         "processing_error": "VARCHAR(500)",

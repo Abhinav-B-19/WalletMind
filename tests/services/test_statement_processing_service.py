@@ -83,14 +83,18 @@ def test_parser_resolution_unknown_value() -> None:
     assert parser_type_for_extension(".txt") is None
 
 
-def test_processing_service_status_transitions_and_timestamps() -> None:
+def test_processing_service_status_transitions_and_timestamps(tmp_path) -> None:
     service, session_factory = _build_processing_service()
     user = _create_user(session_factory)
     statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
 
+    statement_path = tmp_path / "import.csv"
+    statement_path.write_text("date,amount\n2026-01-01,100\n", encoding="utf-8")
+
     service.process_statement(
         statement_uuid=statement.uuid,
         original_filename="import.csv",
+        stored_file_path=str(statement_path),
         content_type="text/csv",
     )
 
@@ -99,21 +103,29 @@ def test_processing_service_status_transitions_and_timestamps() -> None:
 
     assert persisted is not None
     assert persisted.status == StatementStatus.READY_FOR_PARSING
+    assert persisted.bank_name == "Unknown"
     assert persisted.detected_file_type == "csv"
-    assert persisted.parser_type == "csv"
+    assert persisted.parser_type == "generic_excel_parser"
+    assert persisted.classification_confidence is not None
+    assert persisted.classification_method is not None
+    assert persisted.classified_at is not None
     assert persisted.processing_started_at is not None
     assert persisted.processing_completed_at is not None
     assert persisted.processing_error is None
 
 
-def test_processing_service_unknown_file_type_sets_unknown_parser() -> None:
+def test_processing_service_unknown_file_type_sets_unknown_parser(tmp_path) -> None:
     service, session_factory = _build_processing_service()
     user = _create_user(session_factory)
     statement = _create_statement(session_factory, user_id=user.id, file_type="txt")
 
+    statement_path = tmp_path / "import.txt"
+    statement_path.write_text("raw text", encoding="utf-8")
+
     service.process_statement(
         statement_uuid=statement.uuid,
         original_filename="import.txt",
+        stored_file_path=str(statement_path),
         content_type="text/plain",
     )
 
@@ -133,27 +145,29 @@ def test_processing_service_failure_transitions_for_missing_statement() -> None:
         service.process_statement(
             statement_uuid="a5e63886-61f4-4ec8-8f36-4d52a1653a4d",
             original_filename="missing.csv",
+            stored_file_path="/tmp/missing.csv",
             content_type="text/csv",
         )
 
 
-def test_processing_service_sets_failed_status_on_runtime_exception(monkeypatch) -> None:
+def test_processing_service_sets_failed_status_on_runtime_exception(monkeypatch, tmp_path) -> None:
     service, session_factory = _build_processing_service()
     user = _create_user(session_factory)
     statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
 
-    def _boom(*, extension: str, content_type: str | None = None) -> str:
+    def _boom(*, original_filename: str, file_bytes: bytes, content_type: str | None = None):
         raise RuntimeError("detector crashed")
 
-    monkeypatch.setattr(
-        "walletmind.services.statement_processing_service.detect_file_type",
-        _boom,
-    )
+    monkeypatch.setattr(service._classifier, "classify", _boom)
+
+    statement_path = tmp_path / "import.csv"
+    statement_path.write_text("date,amount\n2026-01-01,100\n", encoding="utf-8")
 
     with pytest.raises(RuntimeError):
         service.process_statement(
             statement_uuid=statement.uuid,
             original_filename="import.csv",
+            stored_file_path=str(statement_path),
             content_type="text/csv",
         )
 
@@ -164,3 +178,81 @@ def test_processing_service_sets_failed_status_on_runtime_exception(monkeypatch)
     assert persisted.status == StatementStatus.FAILED
     assert persisted.processing_completed_at is not None
     assert persisted.processing_error is not None
+
+
+def test_processing_service_axis_classification_selects_axis_parser(tmp_path) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
+
+    statement_path = tmp_path / "axis.csv"
+    statement_path.write_text(
+        "Tran Date,Particulars,CR/DR,Balance\n2026-01-01,Salary,CR,9000\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="axis_statement.csv",
+        stored_file_path=str(statement_path),
+        content_type="text/csv",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.bank_name == "Axis Bank"
+    assert persisted.parser_type == "axis_excel_parser"
+
+
+def test_processing_service_tmb_classification_selects_tmb_parser(tmp_path) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
+
+    statement_path = tmp_path / "tmb.csv"
+    statement_path.write_text(
+        "Date,Narration,Withdrawal,Deposit\n2026-01-01,ATM,250,0\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="tmb_statement.csv",
+        stored_file_path=str(statement_path),
+        content_type="text/csv",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.bank_name == "Tamilnad Mercantile Bank (TMB)"
+    assert persisted.parser_type == "tmb_excel_parser"
+
+
+def test_processing_service_canara_classification_selects_canara_parser(tmp_path) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
+
+    statement_path = tmp_path / "canara.csv"
+    statement_path.write_text(
+        "Txn Date,Description,Debit,Credit,Balance\n2026-01-01,UPI,250,0,1200\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="canara_statement.csv",
+        stored_file_path=str(statement_path),
+        content_type="text/csv",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.bank_name == "Canara Bank"
+    assert persisted.parser_type == "canara_excel_parser"

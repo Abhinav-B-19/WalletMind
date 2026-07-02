@@ -56,6 +56,7 @@ def test_upload_valid_csv(tmp_path) -> None:
     assert response.original_filename == "statement.csv"
     assert response.file_type == "csv"
     assert response.file_size > 0
+    assert response.stored_file_path is not None
     assert (tmp_path / "uploads" / response.stored_filename).exists()
 
 

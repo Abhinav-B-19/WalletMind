@@ -13,8 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class StatementStatus(str, Enum):
     """Supported statement processing states."""
 
-    UPLOADED = "uploaded"
     QUEUED = "queued"
+    UPLOADED = "uploaded"
+    CLASSIFYING = "classifying"
+    CLASSIFIED = "classified"
     PROCESSING = "processing"
     READY_FOR_PARSING = "ready_for_parsing"
     PARSED = "parsed"
@@ -71,12 +73,16 @@ class UploadResponseDTO(BaseModel):
     """API/service response payload for uploaded statement metadata."""
 
     statement_uuid: UUID
+    stored_file_path: str | None = None
     original_filename: str
     stored_filename: str
     file_size: int
     file_type: str
     parser_type: str
     bank_name: Optional[str] = None
+    classification_confidence: float | None = None
+    classification_method: str | None = None
+    classified_at: datetime | None = None
     analysis_status: StatementStatus
     status: StatementStatus
     uploaded_at: datetime
