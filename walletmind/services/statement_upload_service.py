@@ -108,13 +108,19 @@ class StatementUploadService:
             self._safe_delete_file(file_path)
             raise StatementStorageError("Failed to persist statement metadata") from exc
 
-    def list_statements(self) -> list[UploadResponseDTO]:
+    def list_statements(self, user_uuid: UUID | str | None = None) -> list[UploadResponseDTO]:
         """Return all uploaded statement metadata records."""
 
+        parsed_user_uuid: UUID | None = None
+        if user_uuid is not None:
+            parsed_user_uuid = self._coerce_uuid(user_uuid)
+
         with self._session_factory() as session:
-            statements = session.scalars(
-                select(Statement).order_by(Statement.uploaded_at.desc(), Statement.id.desc())
-            ).all()
+            query = select(Statement).order_by(Statement.uploaded_at.desc(), Statement.id.desc())
+            if parsed_user_uuid is not None:
+                query = query.join(User).where(User.uuid == str(parsed_user_uuid))
+
+            statements = session.scalars(query).all()
             return [
                 self._to_upload_response(
                     statement,

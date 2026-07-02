@@ -52,11 +52,12 @@ async def upload_statement(
     responses=error_responses,
 )
 def list_statements(
+    user_uuid: UUID | None = None,
     service: StatementUploadService = Depends(get_statement_upload_service),
 ) -> list[UploadResponseDTO]:
     """List all uploaded statement metadata records."""
 
-    return service.list_statements()
+    return service.list_statements(user_uuid=user_uuid)
 
 
 @router.get(

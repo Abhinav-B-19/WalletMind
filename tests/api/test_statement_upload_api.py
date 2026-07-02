@@ -92,6 +92,66 @@ def test_statement_list_endpoint(tmp_path) -> None:
     assert body[0]["original_filename"] == "june.csv"
 
 
+def test_statement_list_endpoint_filters_by_user_uuid(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user_one = _create_persisted_user(session_factory)
+    with session_factory() as session:
+        user_two = User(
+            full_name="Mila Roe",
+            occupation="Designer",
+            monthly_income=Decimal("5100.00"),
+            currency="USD",
+            financial_goal="Reduce discretionary spending.",
+        )
+        session.add(user_two)
+        session.commit()
+        session.refresh(user_two)
+
+    client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user_one.uuid},
+        files={"file": ("u1.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+    )
+    client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user_two.uuid},
+        files={"file": ("u2.csv", b"date,amount\n2026-06-01,220\n", "text/csv")},
+    )
+
+    response = client.get(f"/api/v1/statements?user_uuid={user_one.uuid}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["original_filename"] == "u1.csv"
+
+
+def test_statement_upload_list_delete_workflow(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    upload_response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={"file": ("workflow.csv", b"date,amount\n2026-08-01,500\n", "text/csv")},
+    )
+    assert upload_response.status_code == 201
+    statement_uuid = upload_response.json()["statement_uuid"]
+
+    list_response = client.get("/api/v1/statements")
+    assert list_response.status_code == 200
+    listed = list_response.json()
+    assert len(listed) == 1
+    assert listed[0]["statement_uuid"] == statement_uuid
+
+    delete_response = client.delete(f"/api/v1/statements/{statement_uuid}")
+    assert delete_response.status_code == 204
+
+    list_after_delete_response = client.get("/api/v1/statements")
+    assert list_after_delete_response.status_code == 200
+    assert list_after_delete_response.json() == []
+
+
 def test_statement_get_endpoint(tmp_path) -> None:
     client, session_factory = _setup_client_with_statement_service(tmp_path)
     user = _create_persisted_user(session_factory)
