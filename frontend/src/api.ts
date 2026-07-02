@@ -1,18 +1,21 @@
 import type { RegistrationFormData } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
-export async function submitRegistration(data: RegistrationFormData): Promise<void> {
+export async function submitRegistration(
+  data: RegistrationFormData,
+): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api/v1/users`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       name: data.fullName,
       occupation: data.occupation,
-      monthly_income: Number(data.monthlyIncome)
-    })
+      monthly_income: Number(data.monthlyIncome),
+    }),
   });
 
   if (!response.ok) {

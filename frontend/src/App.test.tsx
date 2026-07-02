@@ -20,7 +20,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create Profile" }));
 
-    expect(await screen.findByText("Full Name is required.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Full Name is required."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Occupation is required.")).toBeInTheDocument();
     expect(screen.getByText("Monthly Income is required.")).toBeInTheDocument();
   });
@@ -31,60 +33,68 @@ describe("App", () => {
     render(<App />);
 
     fireEvent.change(screen.getByLabelText("Full Name"), {
-      target: { value: "Ava Lee" }
+      target: { value: "Ava Lee" },
     });
     fireEvent.change(screen.getByLabelText("Occupation"), {
-      target: { value: "Consultant" }
+      target: { value: "Consultant" },
     });
     fireEvent.change(screen.getByLabelText("Monthly Income"), {
-      target: { value: "5400" }
+      target: { value: "5400" },
     });
     fireEvent.change(screen.getByLabelText("Currency"), {
-      target: { value: "USD" }
+      target: { value: "USD" },
     });
     fireEvent.change(screen.getByLabelText("Primary Financial Goal"), {
-      target: { value: "Build Emergency Fund" }
+      target: { value: "Build Emergency Fund" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Create Profile" }));
 
     await waitFor(() => {
-      expect(screen.getByText("✓ Profile Created Successfully")).toBeInTheDocument();
+      expect(
+        screen.getByText("✓ Profile Created Successfully"),
+      ).toBeInTheDocument();
     });
     expect(
-      screen.getByText("Ready to Upload Your First Bank Statement")
+      screen.getByText("Ready to Upload Your First Bank Statement"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Continue" }),
+    ).toBeInTheDocument();
   });
 
   it("shows API error message when submission fails", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
-      json: async () => ({ message: "User with the same name and occupation already exists" })
+      json: async () => ({
+        message: "User with the same name and occupation already exists",
+      }),
     });
 
     render(<App />);
 
     fireEvent.change(screen.getByLabelText("Full Name"), {
-      target: { value: "Ava Lee" }
+      target: { value: "Ava Lee" },
     });
     fireEvent.change(screen.getByLabelText("Occupation"), {
-      target: { value: "Consultant" }
+      target: { value: "Consultant" },
     });
     fireEvent.change(screen.getByLabelText("Monthly Income"), {
-      target: { value: "5400" }
+      target: { value: "5400" },
     });
     fireEvent.change(screen.getByLabelText("Currency"), {
-      target: { value: "USD" }
+      target: { value: "USD" },
     });
     fireEvent.change(screen.getByLabelText("Primary Financial Goal"), {
-      target: { value: "Build Emergency Fund" }
+      target: { value: "Build Emergency Fund" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Create Profile" }));
 
     expect(
-      await screen.findByText("User with the same name and occupation already exists")
+      await screen.findByText(
+        "User with the same name and occupation already exists",
+      ),
     ).toBeInTheDocument();
   });
 });

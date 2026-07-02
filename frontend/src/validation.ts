@@ -1,6 +1,8 @@
 import type { RegistrationErrors, RegistrationFormData } from "./types";
 
-export function validateRegistrationForm(data: RegistrationFormData): RegistrationErrors {
+export function validateRegistrationForm(
+  data: RegistrationFormData,
+): RegistrationErrors {
   const errors: RegistrationErrors = {};
 
   if (!data.fullName.trim()) {

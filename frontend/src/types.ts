@@ -6,4 +6,6 @@ export type RegistrationFormData = {
   primaryFinancialGoal: string;
 };
 
-export type RegistrationErrors = Partial<Record<keyof RegistrationFormData, string>>;
+export type RegistrationErrors = Partial<
+  Record<keyof RegistrationFormData, string>
+>;

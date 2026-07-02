@@ -9,14 +9,16 @@ describe("validateRegistrationForm", () => {
       occupation: "",
       monthlyIncome: "",
       currency: "",
-      primaryFinancialGoal: ""
+      primaryFinancialGoal: "",
     });
 
     expect(result.fullName).toBe("Full Name is required.");
     expect(result.occupation).toBe("Occupation is required.");
     expect(result.monthlyIncome).toBe("Monthly Income is required.");
     expect(result.currency).toBe("Please select a currency.");
-    expect(result.primaryFinancialGoal).toBe("Please select a primary financial goal.");
+    expect(result.primaryFinancialGoal).toBe(
+      "Please select a primary financial goal.",
+    );
   });
 
   it("returns error when monthly income is zero or invalid", () => {
@@ -25,7 +27,7 @@ describe("validateRegistrationForm", () => {
       occupation: "Engineer",
       monthlyIncome: "0",
       currency: "USD",
-      primaryFinancialGoal: "Build Emergency Fund"
+      primaryFinancialGoal: "Build Emergency Fund",
     });
 
     const invalidResult = validateRegistrationForm({
@@ -33,11 +35,15 @@ describe("validateRegistrationForm", () => {
       occupation: "Engineer",
       monthlyIncome: "abc",
       currency: "USD",
-      primaryFinancialGoal: "Build Emergency Fund"
+      primaryFinancialGoal: "Build Emergency Fund",
     });
 
-    expect(zeroResult.monthlyIncome).toBe("Monthly Income must be greater than 0.");
-    expect(invalidResult.monthlyIncome).toBe("Monthly Income must be greater than 0.");
+    expect(zeroResult.monthlyIncome).toBe(
+      "Monthly Income must be greater than 0.",
+    );
+    expect(invalidResult.monthlyIncome).toBe(
+      "Monthly Income must be greater than 0.",
+    );
   });
 
   it("returns no errors for valid input", () => {
@@ -46,7 +52,7 @@ describe("validateRegistrationForm", () => {
       occupation: "Product Manager",
       monthlyIncome: "7500",
       currency: "USD",
-      primaryFinancialGoal: "Retirement Planning"
+      primaryFinancialGoal: "Retirement Planning",
     });
 
     expect(result).toEqual({});

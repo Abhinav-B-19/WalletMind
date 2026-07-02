@@ -5,6 +5,7 @@ from sqlalchemy.engine import Engine
 from backend.app.core.config import DATABASE_DIR
 from backend.app.database.base import Base
 from backend.app.database.session import engine
+from backend.app.models.statement import Statement  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
 
 
