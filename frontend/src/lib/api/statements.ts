@@ -5,8 +5,12 @@ import { apiClient } from "@/lib/api/client";
 
 const statementStatusSchema = z.enum([
   "uploaded",
+  "queued",
   "processing",
+  "ready_for_parsing",
   "parsed",
+  "analysis_pending",
+  "completed",
   "failed",
 ]);
 

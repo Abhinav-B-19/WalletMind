@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   FileUp,
@@ -15,9 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { PageTitle, SectionTitle } from "@/components/ui/section-title";
 import { StatCard } from "@/components/ui/stat-card";
 import { getStoredUser } from "@/lib/auth/storage";
+import {
+  listStatements,
+  type UploadedStatement,
+} from "@/lib/api/statements";
 
 const QUICK_ACTIONS = [
   {
@@ -47,11 +53,93 @@ const UPCOMING_FEATURES = [
 
 export function WorkspacePage() {
   const user = getStoredUser();
+  const [statements, setStatements] = useState<UploadedStatement[]>([]);
+  const [isLoadingStatements, setIsLoadingStatements] = useState(false);
+  const [statementsError, setStatementsError] = useState<string | null>(null);
   const registrationDate = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   }).format(new Date());
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadStatements() {
+      if (!user?.id) {
+        if (mounted) {
+          setStatements([]);
+        }
+        return;
+      }
+
+      setIsLoadingStatements(true);
+      setStatementsError(null);
+
+      try {
+        const response = await listStatements(user.id);
+        if (!mounted) {
+          return;
+        }
+        setStatements(response);
+      } catch {
+        if (!mounted) {
+          return;
+        }
+        setStatementsError(
+          "Unable to load statements for Home right now. Please try again.",
+        );
+      } finally {
+        if (mounted) {
+          setIsLoadingStatements(false);
+        }
+      }
+    }
+
+    void loadStatements();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  const recentStatements = useMemo(
+    () =>
+      [...statements]
+        .sort(
+          (left, right) =>
+            new Date(right.uploaded_at).getTime() -
+            new Date(left.uploaded_at).getTime(),
+        )
+        .slice(0, 5),
+    [statements],
+  );
+
+  const readyForAnalysisStatements = useMemo(
+    () =>
+      statements
+        .filter((statement) =>
+          [
+            "uploaded",
+            "queued",
+            "ready_for_parsing",
+            "analysis_pending",
+          ].includes(statement.analysis_status),
+        )
+        .sort(
+          (left, right) =>
+            new Date(right.uploaded_at).getTime() -
+            new Date(left.uploaded_at).getTime(),
+        )
+        .slice(0, 5),
+    [statements],
+  );
+
+  const formatStatusLabel = (status: UploadedStatement["analysis_status"]) =>
+    status
+      .split("_")
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
 
   return (
     <div className="space-y-6">
@@ -135,16 +223,60 @@ export function WorkspacePage() {
             <CardTitle className="text-lg">Recent Statements</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <EmptyState
-              title="No statements in your library yet"
-              description="Upload your first statement to begin your WalletMind timeline and unlock smart insights."
-              icon={Landmark}
-            />
-            <Button asChild>
-              <Link to="/app/statements/upload">
-                Upload your first statement
-              </Link>
-            </Button>
+            {isLoadingStatements ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                Loading recent statements...
+              </p>
+            ) : null}
+
+            {!isLoadingStatements && statementsError ? (
+              <ErrorState title="Recent Statements" description={statementsError} />
+            ) : null}
+
+            {!isLoadingStatements && !statementsError && recentStatements.length === 0 ? (
+              <>
+                <EmptyState
+                  title="No statements in your library yet"
+                  description="Upload your first statement to begin your WalletMind timeline and unlock smart insights."
+                  icon={Landmark}
+                />
+                <Button asChild>
+                  <Link to="/app/statements/upload">
+                    Upload your first statement
+                  </Link>
+                </Button>
+              </>
+            ) : null}
+
+            {!isLoadingStatements && !statementsError && recentStatements.length > 0 ? (
+              <>
+                <p className="text-sm text-[var(--text-muted)]">
+                  {statements.length} total statement
+                  {statements.length === 1 ? "" : "s"} in your library.
+                </p>
+                <div className="space-y-2">
+                  {recentStatements.map((statement) => (
+                    <div
+                      key={statement.statement_uuid}
+                      className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="truncate text-sm font-semibold" title={statement.original_filename}>
+                          {statement.original_filename}
+                        </p>
+                        <Badge variant="muted">{statement.parser_type}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Uploaded {new Date(statement.uploaded_at).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <Button asChild variant="secondary">
+                  <Link to="/app/statements">Open Statement Library</Link>
+                </Button>
+              </>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -153,11 +285,40 @@ export function WorkspacePage() {
             <CardTitle className="text-lg">Ready For Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              title="Nothing queued for AI analysis"
-              description="Once statements are uploaded, they will appear here as ready-to-analyze files for WalletMind AI."
-              icon={Sparkles}
-            />
+            {isLoadingStatements ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                Loading analysis queue...
+              </p>
+            ) : null}
+
+            {!isLoadingStatements && !statementsError && readyForAnalysisStatements.length === 0 ? (
+              <EmptyState
+                title="Nothing queued for AI analysis"
+                description="Once statements are uploaded, they will appear here as ready-to-analyze files for WalletMind AI."
+                icon={Sparkles}
+              />
+            ) : null}
+
+            {!isLoadingStatements && !statementsError && readyForAnalysisStatements.length > 0 ? (
+              <div className="space-y-2">
+                {readyForAnalysisStatements.map((statement) => (
+                  <div
+                    key={statement.statement_uuid}
+                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-sm font-semibold" title={statement.original_filename}>
+                        {statement.original_filename}
+                      </p>
+                      <Badge>{formatStatusLabel(statement.analysis_status)}</Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Parser: {statement.parser_type}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </section>

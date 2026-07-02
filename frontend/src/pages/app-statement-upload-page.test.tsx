@@ -54,8 +54,8 @@ describe("AppStatementUploadPage", () => {
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "uploaded",
-      status: "uploaded",
+      analysis_status: "queued",
+      status: "queued",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -101,8 +101,8 @@ describe("AppStatementUploadPage", () => {
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "uploaded",
-      status: "uploaded",
+      analysis_status: "queued",
+      status: "queued",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -144,8 +144,8 @@ describe("AppStatementUploadPage", () => {
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "uploaded",
-      status: "uploaded",
+      analysis_status: "queued",
+      status: "queued",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -183,8 +183,8 @@ describe("AppStatementUploadPage", () => {
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "uploaded",
-        status: "uploaded",
+        analysis_status: "queued",
+        status: "queued",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -198,8 +198,8 @@ describe("AppStatementUploadPage", () => {
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "uploaded",
-        status: "uploaded",
+        analysis_status: "queued",
+        status: "queued",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       });
 
@@ -241,8 +241,8 @@ describe("AppStatementUploadPage", () => {
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "uploaded",
-        status: "uploaded",
+        analysis_status: "queued",
+        status: "queued",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -256,8 +256,8 @@ describe("AppStatementUploadPage", () => {
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "uploaded",
-        status: "uploaded",
+        analysis_status: "queued",
+        status: "queued",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       });
 
@@ -281,5 +281,69 @@ describe("AppStatementUploadPage", () => {
       name: "Statement Uploaded Successfully",
     });
     expect(uploadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts current backend upload payload with queued status without validation error", async () => {
+    vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
+    vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
+      statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f457",
+      original_filename: "pipeline.csv",
+      stored_filename: "stored.csv",
+      file_size: 77,
+      file_type: "csv",
+      parser_type: "csv",
+      bank_name: null,
+      analysis_status: "queued",
+      status: "queued",
+      uploaded_at: "2026-07-03T09:00:00.000Z",
+    });
+
+    render(<AppStatementUploadPage />);
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("pipeline.csv")] },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Statement Uploaded Successfully",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Upload validation")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Received an unexpected response from the upload service.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows upload validation when upload service returns error", async () => {
+    vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
+    vi.spyOn(statementsApi, "uploadStatement").mockRejectedValue(
+      new Error("Upload service is temporarily unavailable. Please try again."),
+    );
+
+    render(<AppStatementUploadPage />);
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [createFile("pipeline.csv")] },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Statement" }));
+
+    expect(await screen.findByText("Upload validation")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Upload service is temporarily unavailable. Please try again.",
+      ),
+    ).toBeInTheDocument();
   });
 });
