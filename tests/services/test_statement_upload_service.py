@@ -73,6 +73,35 @@ def test_upload_valid_xlsx(tmp_path) -> None:
     assert response.file_type == "xlsx"
 
 
+def test_upload_valid_xls(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="statement.xls",
+        file_bytes=b"D0CF11E0A1B11AE1",
+    )
+
+    assert response.original_filename == "statement.xls"
+    assert response.file_type == "xls"
+
+
+def test_upload_valid_pdf(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="statement.pdf",
+        file_bytes=b"%PDF-1.7 sample",
+    )
+
+    assert response.original_filename == "statement.pdf"
+    assert response.file_type == "pdf"
+    assert response.parser_type == "pdf"
+
+
 def test_upload_rejects_invalid_extension(tmp_path) -> None:
     service, session_factory = _build_service(tmp_path)
     user = _create_user(session_factory)
@@ -80,8 +109,8 @@ def test_upload_rejects_invalid_extension(tmp_path) -> None:
     with pytest.raises(UnsupportedFileTypeError):
         service.upload_statement(
             user_uuid=user.uuid,
-            original_filename="statement.pdf",
-            file_bytes=b"%PDF-1.7",
+            original_filename="statement.txt",
+            file_bytes=b"not-supported",
         )
 
 
@@ -131,3 +160,57 @@ def test_upload_generates_uuid_stored_filename_and_persists_metadata(tmp_path) -
     assert statement is not None
     assert statement.user_id == user.id
     assert statement.original_filename == "statement.xls"
+
+
+def test_upload_assigns_parser_type_for_csv_and_excel(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    csv_response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="transactions.csv",
+        file_bytes=b"date,amount\n2026-07-01,100\n",
+    )
+    xlsx_response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="transactions.xlsx",
+        file_bytes=b"PK\x03\x04dummy-xlsx-content",
+    )
+
+    assert csv_response.parser_type == "csv"
+    assert xlsx_response.parser_type == "excel"
+
+
+def test_upload_assigns_analysis_status_uploaded(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="status_check.csv",
+        file_bytes=b"date,amount\n2026-07-01,100\n",
+    )
+
+    assert response.status == "uploaded"
+    assert response.analysis_status == "uploaded"
+
+
+def test_upload_sanitizes_original_filename(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="../../bad name(1).csv",
+        file_bytes=b"date,amount\n2026-07-01,100\n",
+    )
+
+    assert response.original_filename == "bad_name_1_.csv"
+
+    with session_factory() as session:
+        statement = session.scalar(
+            select(Statement).where(Statement.uuid == str(response.statement_uuid))
+        )
+
+    assert statement is not None
+    assert statement.original_filename == "bad_name_1_.csv"

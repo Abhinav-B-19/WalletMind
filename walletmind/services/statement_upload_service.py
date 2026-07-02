@@ -20,7 +20,13 @@ from walletmind.exceptions import (
     UserNotFoundError,
 )
 from walletmind.schemas.statement import UploadResponseDTO
-from walletmind.utils.file_uploads import generate_stored_filename, normalized_extension
+from walletmind.utils.file_uploads import (
+    EXTENSION_TO_PARSER_TYPE,
+    generate_stored_filename,
+    normalized_extension,
+    parser_type_for_extension,
+    sanitize_filename,
+)
 
 
 class StatementUploadService:
@@ -37,7 +43,7 @@ class StatementUploadService:
         self._session_factory = session_factory
         self._upload_dir = Path(upload_dir)
         self._max_file_size_bytes = max_file_size_bytes
-        self._allowed_extensions = allowed_extensions or {".csv", ".xls", ".xlsx"}
+        self._allowed_extensions = allowed_extensions or set(EXTENSION_TO_PARSER_TYPE)
 
     def upload_statement(
         self,
@@ -49,10 +55,16 @@ class StatementUploadService:
         """Validate, persist, and return metadata for an uploaded statement."""
 
         parsed_user_uuid = self._coerce_uuid(user_uuid)
-        extension = normalized_extension(original_filename)
+        clean_filename = sanitize_filename(original_filename)
+        extension = normalized_extension(clean_filename)
         if extension not in self._allowed_extensions:
             raise UnsupportedFileTypeError(
-                "Unsupported file type. Allowed formats are .csv, .xls, .xlsx"
+                "Unsupported file type. Allowed formats are .csv, .xls, .xlsx, .pdf"
+            )
+        parser_type = parser_type_for_extension(extension)
+        if parser_type is None:
+            raise UnsupportedFileTypeError(
+                "Unsupported file type. Allowed formats are .csv, .xls, .xlsx, .pdf"
             )
 
         file_size = len(file_bytes)
@@ -79,7 +91,7 @@ class StatementUploadService:
 
                 statement = Statement(
                     user_id=user.id,
-                    original_filename=original_filename,
+                    original_filename=clean_filename,
                     stored_filename=stored_filename,
                     file_type=extension.lstrip("."),
                     file_size=file_size,
@@ -89,7 +101,7 @@ class StatementUploadService:
                 session.add(statement)
                 session.commit()
                 session.refresh(statement)
-                return self._to_upload_response(statement)
+                return self._to_upload_response(statement, parser_type=parser_type)
         except (UserNotFoundError, UnsupportedFileTypeError, EmptyFileError, FileTooLargeError):
             raise
         except SQLAlchemyError as exc:
@@ -103,7 +115,14 @@ class StatementUploadService:
             statements = session.scalars(
                 select(Statement).order_by(Statement.uploaded_at.desc(), Statement.id.desc())
             ).all()
-            return [self._to_upload_response(statement) for statement in statements]
+            return [
+                self._to_upload_response(
+                    statement,
+                    parser_type=parser_type_for_extension(f".{statement.file_type}")
+                    or "unknown",
+                )
+                for statement in statements
+            ]
 
     def get_statement(self, statement_uuid: UUID | str) -> UploadResponseDTO:
         """Return metadata for a single statement."""
@@ -117,7 +136,11 @@ class StatementUploadService:
                 raise StatementNotFoundError(
                     f"Statement '{parsed_statement_uuid}' was not found"
                 )
-            return self._to_upload_response(statement)
+            return self._to_upload_response(
+                statement,
+                parser_type=parser_type_for_extension(f".{statement.file_type}")
+                or "unknown",
+            )
 
     def delete_statement(self, statement_uuid: UUID | str) -> None:
         """Delete statement metadata and the uploaded file."""
@@ -151,16 +174,17 @@ class StatementUploadService:
         return UUID(str(value))
 
     @staticmethod
-    def _to_upload_response(statement: Statement) -> UploadResponseDTO:
+    def _to_upload_response(statement: Statement, *, parser_type: str) -> UploadResponseDTO:
         return UploadResponseDTO(
             statement_uuid=UUID(statement.uuid),
             original_filename=statement.original_filename,
             stored_filename=statement.stored_filename,
             file_size=statement.file_size,
             file_type=statement.file_type,
+            parser_type=parser_type,
             bank_name=statement.bank_name,
-            analysis_status=StatementStatus(statement.status),
-            status=StatementStatus(statement.status),
+            analysis_status=StatementStatus.UPLOADED,
+            status=StatementStatus.UPLOADED,
             uploaded_at=statement.uploaded_at,
         )
 

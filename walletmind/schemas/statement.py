@@ -71,6 +71,7 @@ class UploadResponseDTO(BaseModel):
     stored_filename: str
     file_size: int
     file_type: str
+    parser_type: str
     bank_name: Optional[str] = None
     analysis_status: StatementStatus
     status: StatementStatus
