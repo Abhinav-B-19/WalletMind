@@ -7,7 +7,7 @@ import { TopHeader } from "@/components/layout/top-header";
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       <TopHeader />
       <PageContainer>
         <Sidebar />

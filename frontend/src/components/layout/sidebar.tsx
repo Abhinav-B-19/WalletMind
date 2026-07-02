@@ -1,6 +1,7 @@
 import {
   Bot,
   CircleDollarSign,
+  CircleUserRound,
   FileStack,
   Home,
   LogOut,
@@ -11,20 +12,39 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { clearStoredUser } from "@/lib/auth/storage";
+import { clearStoredUser, getStoredUser } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils";
 
 const links = [
   { to: "/app/home", label: "Home", icon: Home, comingSoon: false },
-  { to: "/app/statements", label: "Statements", icon: FileStack },
-  { to: "/app/dashboard", label: "Budgets", icon: CircleDollarSign, comingSoon: true },
+  {
+    to: "/app/statements",
+    label: "Statements",
+    icon: FileStack,
+    comingSoon: false,
+  },
+  {
+    to: "/app/dashboard",
+    label: "Budgets",
+    icon: CircleDollarSign,
+    comingSoon: true,
+  },
   { to: "/app/planner", label: "Planner", icon: Timer, comingSoon: true },
   { to: "/app/chat", label: "AI Assistant", icon: Bot, comingSoon: true },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/settings", label: "Settings", icon: Settings, comingSoon: false },
 ];
 
 export function Sidebar() {
   const navigate = useNavigate();
+  const user = getStoredUser();
+  const currentDate = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
+  const displayName = user?.name ?? "User";
+  const occupation = user?.occupation ?? "Not set";
 
   const handleLogout = () => {
     clearStoredUser();
@@ -32,19 +52,8 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-full border-r border-[var(--border)] bg-[var(--surface-soft)] px-3 py-4 md:min-h-[calc(100vh-73px)] md:w-72">
+    <aside className="h-full w-full border-r border-[var(--border)] bg-[var(--surface-soft)] px-3 py-4 md:w-72 md:flex-shrink-0">
       <div className="flex h-full flex-col">
-        <div className="mb-6 flex items-center gap-3 px-3">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary)] text-sm font-bold text-[var(--bg)] shadow-[var(--shadow-sm)]">
-            WM
-          </div>
-          <div>
-            <p className="text-sm font-semibold">WalletMind</p>
-            <p className="text-xs text-[var(--text-muted)]">
-              AI Financial Concierge
-            </p>
-          </div>
-        </div>
         <nav aria-label="Primary" className="flex-1">
           <ul className="space-y-1">
             {links.map(({ to, label, icon: Icon, comingSoon }) => (
@@ -67,13 +76,16 @@ export function Sidebar() {
                     />
                     {label}
                   </span>
-                  {comingSoon ? <Badge variant="muted">Coming Soon</Badge> : null}
+                  {comingSoon ? (
+                    <Badge variant="muted">Coming Soon</Badge>
+                  ) : null}
                 </NavLink>
               </li>
             ))}
           </ul>
         </nav>
-        <div className="mt-6 border-t border-[var(--border)] px-3 pt-4">
+
+        <div className="mt-6 space-y-3 border-t border-[var(--border)] px-3 pt-4">
           <Button
             variant="secondary"
             className="w-full justify-start gap-3"

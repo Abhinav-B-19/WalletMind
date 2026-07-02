@@ -5,19 +5,18 @@ import { getStoredUser } from "@/lib/auth/storage";
 export function TopHeader() {
   const user = getStoredUser();
   const displayName = user?.name ?? "User";
-  const currentDate = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
 
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6">
-        <div>
-          <h1 className="text-base font-semibold tracking-tight md:text-lg">Welcome back, {displayName}</h1>
-          <p className="text-xs text-[var(--text-muted)]">{currentDate}</p>
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 py-3 md:px-6">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary)] text-sm font-bold text-[var(--bg)] shadow-[var(--shadow-sm)]">
+            WM
+          </div>
+          <div>
+            <h1 className="text-base font-semibold tracking-tight md:text-lg">WalletMind</h1>
+          <p className="text-xs text-[var(--text-muted)]">AI Financial Concierge</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
