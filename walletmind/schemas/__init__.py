@@ -6,6 +6,7 @@ from walletmind.schemas.statement import (
 	StatementStatus,
 	StatementStatusUpdate,
 	StatementUpdate,
+	UploadResponseDTO,
 )
 from walletmind.schemas.user import UserCreateDTO, UserDTO, UserUpdateDTO
 
@@ -15,6 +16,7 @@ __all__ = [
 	"StatementStatus",
 	"StatementStatusUpdate",
 	"StatementUpdate",
+	"UploadResponseDTO",
 	"UserCreateDTO",
 	"UserDTO",
 	"UserUpdateDTO",

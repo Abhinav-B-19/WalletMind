@@ -23,6 +23,10 @@ _ensure_project_root_on_path()
 
 from backend.app.api.errors import register_error_handlers
 from backend.app.api.router import api_router
+from backend.app.core.config import STORAGE_DIR
+from backend.app.database.init_db import init_database
+from backend.app.database.session import SessionLocal
+from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.user_service import UserService
 
 
@@ -35,6 +39,8 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    init_database()
 
     app.add_middleware(
         CORSMiddleware,
@@ -50,6 +56,10 @@ def create_app() -> FastAPI:
     )
 
     app.state.user_service = UserService()
+    app.state.statement_upload_service = StatementUploadService(
+        session_factory=SessionLocal,
+        upload_dir=STORAGE_DIR / "uploads",
+    )
     app.include_router(api_router)
     register_error_handlers(app)
 

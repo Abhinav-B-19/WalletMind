@@ -61,3 +61,17 @@ class StatementRead(StatementBase):
     uuid: UUID
     uploaded_at: datetime
     updated_at: datetime
+
+
+class UploadResponseDTO(BaseModel):
+    """API/service response payload for uploaded statement metadata."""
+
+    statement_uuid: UUID
+    original_filename: str
+    stored_filename: str
+    file_size: int
+    file_type: str
+    bank_name: Optional[str] = None
+    analysis_status: StatementStatus
+    status: StatementStatus
+    uploaded_at: datetime

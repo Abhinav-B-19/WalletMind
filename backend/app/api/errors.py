@@ -7,7 +7,15 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from walletmind.exceptions import DuplicateUserError, UserNotFoundError
+from walletmind.exceptions import (
+    DuplicateUserError,
+    EmptyFileError,
+    FileTooLargeError,
+    StatementNotFoundError,
+    StatementStorageError,
+    UnsupportedFileTypeError,
+    UserNotFoundError,
+)
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -49,5 +57,68 @@ def register_error_handlers(app: FastAPI) -> None:
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
                 "details": jsonable_encoder(exc.errors()),
+            },
+        )
+
+    @app.exception_handler(UnsupportedFileTypeError)
+    async def unsupported_file_type_handler(
+        request: Request, exc: UnsupportedFileTypeError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=415,
+            content={
+                "code": "UNSUPPORTED_FILE_TYPE",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(EmptyFileError)
+    async def empty_file_handler(request: Request, exc: EmptyFileError) -> JSONResponse:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": "EMPTY_FILE",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(FileTooLargeError)
+    async def file_too_large_handler(
+        request: Request, exc: FileTooLargeError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "code": "FILE_TOO_LARGE",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(StatementNotFoundError)
+    async def statement_not_found_handler(
+        request: Request, exc: StatementNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "code": "STATEMENT_NOT_FOUND",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(StatementStorageError)
+    async def statement_storage_handler(
+        request: Request, exc: StatementStorageError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": "STATEMENT_STORAGE_ERROR",
+                "message": str(exc),
+                "details": None,
             },
         )
