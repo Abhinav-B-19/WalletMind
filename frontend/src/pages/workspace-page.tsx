@@ -24,7 +24,7 @@ const QUICK_ACTIONS = [
     title: "Upload Statement",
     description: "Add a new bank statement to your secure wallet library.",
     icon: FileUp,
-    href: "/app/statements",
+    href: "/app/statements/upload",
     comingSoon: false,
   },
   {
@@ -138,7 +138,9 @@ export function WorkspacePage() {
               icon={Landmark}
             />
             <Button asChild>
-              <Link to="/app/statements">Upload your first statement</Link>
+              <Link to="/app/statements/upload">
+                Upload your first statement
+              </Link>
             </Button>
           </CardContent>
         </Card>

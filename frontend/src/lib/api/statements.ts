@@ -29,6 +29,22 @@ const uploadEnvelopeSchema = z.object({
   data: uploadDataSchema,
 });
 
+const listEnvelopeSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.array(uploadDataSchema),
+});
+
+const deleteEnvelopeSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z
+    .object({
+      statement_uuid: z.string().uuid().optional(),
+    })
+    .optional(),
+});
+
 export type UploadedStatement = z.infer<typeof uploadDataSchema>;
 
 type UploadStatementInput = {
@@ -114,6 +130,30 @@ export async function uploadStatement({
 
     const parsed = uploadEnvelopeSchema.parse(response.data);
     return parsed.data;
+  } catch (error) {
+    throw toFriendlyUploadError(error);
+  }
+}
+
+export async function listStatements(
+  userUuid?: string,
+): Promise<UploadedStatement[]> {
+  try {
+    const response = await apiClient.get("/statements", {
+      params: userUuid ? { user_uuid: userUuid } : undefined,
+    });
+
+    const parsed = listEnvelopeSchema.parse(response.data);
+    return parsed.data;
+  } catch (error) {
+    throw toFriendlyUploadError(error);
+  }
+}
+
+export async function deleteStatement(statementUuid: string): Promise<void> {
+  try {
+    const response = await apiClient.delete(`/statements/${statementUuid}`);
+    deleteEnvelopeSchema.parse(response.data);
   } catch (error) {
     throw toFriendlyUploadError(error);
   }

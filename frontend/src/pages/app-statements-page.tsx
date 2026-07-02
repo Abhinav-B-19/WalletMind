@@ -1,42 +1,47 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  CheckCircle2,
   FileSpreadsheet,
   FileText,
+  Filter,
   Image,
-  LoaderCircle,
+  Search,
+  Trash2,
   Upload,
-  X,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ErrorState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
+import { useGlobalLoader } from "@/context/global-loader-context";
 import { PageTitle, SectionTitle } from "@/components/ui/section-title";
+import { StatCard } from "@/components/ui/stat-card";
 import { getStoredUser } from "@/lib/auth/storage";
-import { type UploadedStatement, uploadStatement } from "@/lib/api/statements";
-import { cn } from "@/lib/utils";
+import {
+  deleteStatement,
+  listStatements,
+  type UploadedStatement,
+} from "@/lib/api/statements";
 
-const ACCEPTED_EXTENSIONS = [
-  "csv",
-  "xls",
-  "xlsx",
+const FILTER_OPTIONS = [
+  "all",
   "pdf",
-  "png",
-  "jpg",
-  "jpeg",
+  "csv",
+  "excel",
+  "image",
+  "ready",
+  "processing",
+  "failed",
 ] as const;
 
-const ACCEPTED_FILE_TYPES = ACCEPTED_EXTENSIONS.map(
-  (extension) => `.${extension}`,
-).join(",");
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const SORT_OPTIONS = ["newest", "oldest", "filename", "fileSize"] as const;
 
-type ValidationState = {
-  error: string | null;
-  warning: string | null;
-};
+type FilterOption = (typeof FILTER_OPTIONS)[number];
+type SortOption = (typeof SORT_OPTIONS)[number];
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -51,9 +56,28 @@ function formatFileSize(bytes: number): string {
   return `${(kilobytes / 1024).toFixed(1)} MB`;
 }
 
+function getStatusLabel(statement: UploadedStatement): string {
+  if (statement.analysis_status === "parsed") {
+    return "Completed";
+  }
+
+  if (statement.analysis_status === "processing") {
+    return "Processing";
+  }
+
+  if (statement.analysis_status === "failed") {
+    return "Failed";
+  }
+
+  if (statement.analysis_status === "uploaded") {
+    return "Ready for Analysis";
+  }
+
+  return "Uploaded";
+}
+
 function getFileExtension(filename: string): string {
-  const extension = filename.split(".").pop()?.toLowerCase();
-  return extension ?? "";
+  return filename.split(".").pop()?.toLowerCase() ?? "";
 }
 
 function getFileIcon(extension: string) {
@@ -68,408 +92,474 @@ function getFileIcon(extension: string) {
   return FileText;
 }
 
+function toFilterLabel(filter: FilterOption): string {
+  if (filter === "all") {
+    return "All";
+  }
+
+  if (filter === "pdf") {
+    return "PDF";
+  }
+
+  if (filter === "csv") {
+    return "CSV";
+  }
+
+  if (filter === "excel") {
+    return "Excel";
+  }
+
+  if (filter === "image") {
+    return "Image";
+  }
+
+  if (filter === "ready") {
+    return "Ready";
+  }
+
+  if (filter === "processing") {
+    return "Processing";
+  }
+
+  return "Failed";
+}
+
 export function AppStatementsPage() {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [validationState, setValidationState] = useState<ValidationState>({
-    error: null,
-    warning: null,
-  });
-  const [dragActive, setDragActive] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadResult, setUploadResult] = useState<UploadedStatement | null>(
-    null,
-  );
-  const [sessionFileNames, setSessionFileNames] = useState<Set<string>>(
-    new Set(),
-  );
-
+  const location = useLocation();
+  const { hideLoader } = useGlobalLoader();
   const user = getStoredUser();
+  const [statements, setStatements] = useState<UploadedStatement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState<FilterOption>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  const previewData = useMemo(() => {
-    if (!selectedFile) {
-      return null;
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadStatements() {
+      if (!user?.id) {
+        if (mounted) {
+          setErrorMessage(
+            "Unable to determine your profile. Please sign in again.",
+          );
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await listStatements(user.id);
+        if (!mounted) {
+          return;
+        }
+        setStatements(response);
+        setErrorMessage(null);
+        hideLoader();
+      } catch {
+        if (!mounted) {
+          return;
+        }
+        setErrorMessage(
+          "Unable to load statements right now. Please try again.",
+        );
+        hideLoader();
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
     }
 
-    const extension = getFileExtension(selectedFile.name);
-    const Icon = getFileIcon(extension);
-    return {
-      extension,
-      Icon,
-      name: selectedFile.name,
-      size: formatFileSize(selectedFile.size),
+    void loadStatements();
+
+    return () => {
+      mounted = false;
     };
-  }, [selectedFile]);
+  }, [location.state, user?.id]);
 
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setUploadProgress(0);
-    setUploadResult(null);
-    setValidationState({ error: null, warning: null });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  const filteredAndSortedStatements = useMemo(() => {
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
-  const validateFile = (file: File): ValidationState => {
-    if (!file || file.size <= 0) {
-      return {
-        error: "Please select a valid non-empty file.",
-        warning: null,
-      };
-    }
+    const filtered = statements.filter((statement) => {
+      const extension = getFileExtension(statement.original_filename);
+      const parserType = statement.parser_type.toLowerCase();
+      const bankName = statement.bank_name?.toLowerCase() ?? "";
+      const filename = statement.original_filename.toLowerCase();
 
-    const extension = getFileExtension(file.name);
-    if (
-      !ACCEPTED_EXTENSIONS.includes(
-        extension as (typeof ACCEPTED_EXTENSIONS)[number],
-      )
-    ) {
-      return {
-        error:
-          "Unsupported file type. Please upload CSV, XLS, XLSX, PDF, PNG, or JPG.",
-        warning: null,
-      };
-    }
+      const matchesSearch =
+        normalizedSearchTerm.length === 0 ||
+        filename.includes(normalizedSearchTerm) ||
+        parserType.includes(normalizedSearchTerm) ||
+        bankName.includes(normalizedSearchTerm);
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      return {
-        error:
-          "File exceeds the 10 MB size limit. Please choose a smaller file.",
-        warning: null,
-      };
-    }
+      if (!matchesSearch) {
+        return false;
+      }
 
-    if (sessionFileNames.has(file.name.toLowerCase())) {
-      return {
-        error:
-          "This file has already been selected in this session. Choose another file.",
-        warning: null,
-      };
-    }
+      if (filter === "all") {
+        return true;
+      }
 
-    return { error: null, warning: null };
-  };
+      if (filter === "pdf") {
+        return extension === "pdf";
+      }
 
-  const handleFileSelection = (file: File | null) => {
-    setUploadResult(null);
+      if (filter === "csv") {
+        return extension === "csv";
+      }
 
-    if (!file) {
-      setSelectedFile(null);
-      setValidationState({
-        error: "Please choose a file before uploading.",
-        warning: null,
-      });
+      if (filter === "excel") {
+        return extension === "xls" || extension === "xlsx";
+      }
+
+      if (filter === "image") {
+        return (
+          extension === "png" || extension === "jpg" || extension === "jpeg"
+        );
+      }
+
+      if (filter === "ready") {
+        return statement.analysis_status === "uploaded";
+      }
+
+      if (filter === "processing") {
+        return statement.analysis_status === "processing";
+      }
+
+      return statement.analysis_status === "failed";
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (sortBy === "newest") {
+        return (
+          new Date(right.uploaded_at).getTime() -
+          new Date(left.uploaded_at).getTime()
+        );
+      }
+
+      if (sortBy === "oldest") {
+        return (
+          new Date(left.uploaded_at).getTime() -
+          new Date(right.uploaded_at).getTime()
+        );
+      }
+
+      if (sortBy === "filename") {
+        return left.original_filename.localeCompare(right.original_filename);
+      }
+
+      return right.file_size - left.file_size;
+    });
+  }, [filter, searchTerm, sortBy, statements]);
+
+  const summary = useMemo(() => {
+    const totalStatements = statements.length;
+    const readyForAnalysis = statements.filter(
+      (statement) => statement.analysis_status === "uploaded",
+    ).length;
+    const processing = statements.filter(
+      (statement) => statement.analysis_status === "processing",
+    ).length;
+    const storageUsedBytes = statements.reduce(
+      (sum, statement) => sum + statement.file_size,
+      0,
+    );
+
+    return {
+      totalStatements,
+      readyForAnalysis,
+      processing,
+      storageUsedBytes,
+    };
+  }, [statements]);
+
+  const handleDelete = async (statement: UploadedStatement) => {
+    const shouldDelete = window.confirm(
+      `Delete ${statement.original_filename}? This action cannot be undone.`,
+    );
+
+    if (!shouldDelete) {
       return;
     }
 
-    const nextValidationState = validateFile(file);
-    setValidationState(nextValidationState);
-
-    if (nextValidationState.error) {
-      setSelectedFile(null);
-      return;
-    }
-
-    setSelectedFile(file);
-    setUploadProgress(0);
-  };
-
-  const handleUpload = async () => {
-    if (!user?.id) {
-      setValidationState({
-        error:
-          "Unable to determine your profile. Please sign in again before uploading.",
-        warning: null,
-      });
-      return;
-    }
-
-    if (!selectedFile) {
-      setValidationState({
-        error: "Please select a file before uploading.",
-        warning: null,
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    setValidationState({ error: null, warning: null });
-    setUploadResult(null);
+    setIsDeleting(statement.statement_uuid);
+    setSuccessMessage(null);
 
     try {
-      const result = await uploadStatement({
-        userUuid: user.id,
-        file: selectedFile,
-        onUploadProgress: setUploadProgress,
-      });
-
-      setSessionFileNames((previous) => {
-        const next = new Set(previous);
-        next.add(selectedFile.name.toLowerCase());
-        return next;
-      });
-      setUploadResult(result);
-    } catch (error) {
-      setValidationState({
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to upload statement right now. Please try again.",
-        warning: null,
-      });
+      await deleteStatement(statement.statement_uuid);
+      setStatements((previous) =>
+        previous.filter(
+          (item) => item.statement_uuid !== statement.statement_uuid,
+        ),
+      );
+      setSuccessMessage("Statement deleted successfully.");
+      setErrorMessage(null);
+    } catch {
+      setErrorMessage(
+        "Unable to delete statement right now. Please try again.",
+      );
     } finally {
-      setIsUploading(false);
+      setIsDeleting(null);
     }
-  };
-
-  const handleFileInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0] ?? null;
-    handleFileSelection(file);
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setDragActive(false);
-
-    const file = event.dataTransfer.files?.[0] ?? null;
-    handleFileSelection(file);
-  };
-
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
   };
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        title="Statement Upload Workspace"
-        subtitle="Upload, review, and prepare statement files for WalletMind analysis."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageTitle
+          title="Statement Library"
+          subtitle="Manage your uploaded financial statements."
+        />
+        <Button asChild>
+          <Link to="/app/statements/upload">
+            <Upload className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+            Upload Statement
+          </Link>
+        </Button>
+      </div>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Total Statements"
+          value={`${summary.totalStatements}`}
+        />
+        <StatCard
+          label="Ready For Analysis"
+          value={`${summary.readyForAnalysis}`}
+        />
+        <StatCard label="Processing" value={`${summary.processing}`} />
+        <StatCard
+          label="Storage Used"
+          value={formatFileSize(summary.storageUsedBytes)}
+        />
+      </section>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Upload Statement</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={openFilePicker}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                openFilePicker();
-              }
-            }}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setDragActive(true);
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setDragActive(true);
-            }}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setDragActive(false);
-            }}
-            onDrop={handleDrop}
-            className={cn(
-              "cursor-pointer rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border)] bg-[var(--surface-soft)] px-6 py-8 text-center transition",
-              dragActive
-                ? "border-[var(--ring)] bg-[var(--surface)]"
-                : "hover:bg-[var(--surface)]",
-            )}
-          >
-            <div className="mx-auto flex max-w-xl flex-col items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]">
-                <Upload className="h-[var(--icon-lg)] w-[var(--icon-lg)]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  Drag & drop your statement file here
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  CSV, XLS, XLSX, PDF, PNG, JPG, JPEG • Up to 10 MB
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={openFilePicker}
+        <CardContent className="space-y-4 p-4 md:p-5">
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+            <label className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-3 h-[var(--icon-sm)] w-[var(--icon-sm)] text-[var(--text-muted)]" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by filename, parser, or bank"
+                className="flex h-10 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-9 py-2 text-sm text-[var(--text)] shadow-[var(--shadow-inset)] outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              />
+            </label>
+
+            <label className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)]">
+              <Filter className="h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+              <select
+                value={filter}
+                onChange={(event) =>
+                  setFilter(event.target.value as FilterOption)
+                }
+                className="bg-transparent text-sm text-[var(--text)] outline-none"
               >
-                Browse Files
-              </Button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED_FILE_TYPES}
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-          </div>
+                {FILTER_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {toFilterLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          {validationState.error ? (
-            <ErrorState
-              title="Upload validation"
-              description={validationState.error}
-            />
-          ) : null}
-
-          {previewData ? (
-            <Card>
-              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-md border border-[var(--border)] bg-[var(--surface-soft)] text-[var(--text-muted)]">
-                    <previewData.Icon className="h-[var(--icon-md)] w-[var(--icon-md)]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{previewData.name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {previewData.size} • .
-                      {previewData.extension.toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={clearSelection}
-                >
-                  <X className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
-                  Remove
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {isUploading ? (
-            <Card>
-              <CardContent className="space-y-2 p-4">
-                <p className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
-                  <LoaderCircle className="h-[var(--icon-sm)] w-[var(--icon-sm)] animate-spin" />
-                  Uploading statement...
-                </p>
-                <div className="h-2 rounded-full bg-[var(--surface-soft)]">
-                  <div
-                    className="h-2 rounded-full bg-[var(--primary)] transition-all"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {uploadProgress}% complete
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-            >
-              Upload Statement
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={clearSelection}
-              disabled={isUploading}
-            >
-              Reset
-            </Button>
+            <label className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)]">
+              <span className="mr-2">Sort</span>
+              <select
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(event.target.value as SortOption)
+                }
+                className="bg-transparent text-sm text-[var(--text)] outline-none"
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="filename">Filename</option>
+                <option value="fileSize">File Size</option>
+              </select>
+            </label>
           </div>
         </CardContent>
       </Card>
 
-      {uploadResult ? (
+      {successMessage ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2 text-lg">
-              <CheckCircle2 className="h-[var(--icon-md)] w-[var(--icon-md)] text-[var(--primary)]" />
-              Upload Complete
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <section className="space-y-4">
-              <SectionTitle
-                title="Statement Metadata"
-                subtitle="File has been uploaded and is ready for analysis workflow."
-              />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">Filename</p>
-                    <p className="text-sm font-semibold">
-                      {uploadResult.original_filename}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      File Size
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {formatFileSize(uploadResult.file_size)}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Parser Type
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {uploadResult.parser_type}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Upload Time
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {new Date(uploadResult.uploaded_at).toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Analysis Status
-                    </p>
-                    <p className="text-sm font-semibold capitalize">
-                      {uploadResult.analysis_status}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="space-y-1 p-4">
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Readiness
-                    </p>
-                    <Badge className="mt-1">Ready for Analysis</Badge>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
+          <CardContent className="p-4 text-sm text-[var(--text)]">
+            {successMessage}
           </CardContent>
         </Card>
+      ) : null}
+
+      {errorMessage ? (
+        <ErrorState title="Statement Library" description={errorMessage} />
+      ) : null}
+
+      {isLoading ? <LoadingState title="Loading statements..." /> : null}
+
+      {!isLoading && filteredAndSortedStatements.length === 0 ? (
+        <EmptyState
+          title="No Statements Yet"
+          description="Upload your first bank statement to begin building your financial timeline."
+          icon={FileSpreadsheet}
+        />
+      ) : null}
+
+      {!isLoading && filteredAndSortedStatements.length > 0 ? (
+        <section className="space-y-4">
+          <SectionTitle
+            title="Uploaded Statements"
+            subtitle="View details and manage statement records."
+          />
+
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-[var(--border)] text-sm">
+                  <thead className="bg-[var(--surface-soft)] text-left text-[var(--text-muted)]">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Filename</th>
+                      <th className="px-4 py-3 font-medium">Bank</th>
+                      <th className="px-4 py-3 font-medium">Parser</th>
+                      <th className="px-4 py-3 font-medium">File Size</th>
+                      <th className="px-4 py-3 font-medium">Uploaded Date</th>
+                      <th className="px-4 py-3 font-medium">Analysis Status</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {filteredAndSortedStatements.map((statement) => {
+                      const extension = getFileExtension(
+                        statement.original_filename,
+                      );
+                      const Icon = getFileIcon(extension);
+                      return (
+                        <tr
+                          key={statement.statement_uuid}
+                          className="align-top"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-[var(--icon-sm)] w-[var(--icon-sm)] text-[var(--text-muted)]" />
+                              <span className="font-medium">
+                                {statement.original_filename}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {statement.bank_name ?? "Unknown"}
+                          </td>
+                          <td className="px-4 py-3">{statement.parser_type}</td>
+                          <td className="px-4 py-3">
+                            {formatFileSize(statement.file_size)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {new Date(statement.uploaded_at).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="muted">
+                              {getStatusLabel(statement)}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                type="button"
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                type="button"
+                                disabled={
+                                  isDeleting === statement.statement_uuid
+                                }
+                                onClick={() => void handleDelete(statement)}
+                              >
+                                <Trash2 className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-3 md:hidden">
+            {filteredAndSortedStatements.map((statement) => {
+              const extension = getFileExtension(statement.original_filename);
+              const Icon = getFileIcon(extension);
+              return (
+                <Card key={statement.statement_uuid}>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-[var(--icon-sm)] w-[var(--icon-sm)] text-[var(--text-muted)]" />
+                        <p className="text-sm font-semibold">
+                          {statement.original_filename}
+                        </p>
+                      </div>
+                      <Badge variant="muted">{getStatusLabel(statement)}</Badge>
+                    </div>
+
+                    <div className="grid gap-1 text-sm text-[var(--text-muted)]">
+                      <p>
+                        <span className="text-[var(--text)]">Bank:</span>{" "}
+                        {statement.bank_name ?? "Unknown"}
+                      </p>
+                      <p>
+                        <span className="text-[var(--text)]">Parser:</span>{" "}
+                        {statement.parser_type}
+                      </p>
+                      <p>
+                        <span className="text-[var(--text)]">File Size:</span>{" "}
+                        {formatFileSize(statement.file_size)}
+                      </p>
+                      <p>
+                        <span className="text-[var(--text)]">Uploaded:</span>{" "}
+                        {new Date(statement.uploaded_at).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        type="button"
+                        className="flex-1"
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        type="button"
+                        className="flex-1"
+                        disabled={isDeleting === statement.statement_uuid}
+                        onClick={() => void handleDelete(statement)}
+                      >
+                        <Trash2 className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
     </div>
   );

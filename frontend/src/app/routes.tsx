@@ -10,6 +10,7 @@ import { AppChatPage } from "@/pages/app-chat-page";
 import { AppDashboardPage } from "@/pages/app-dashboard-page";
 import { AppPlannerPage } from "@/pages/app-planner-page";
 import { AppSettingsPage } from "@/pages/app-settings-page";
+import { AppStatementUploadPage } from "@/pages/app-statement-upload-page";
 import { AppStatementsPage } from "@/pages/app-statements-page";
 import { HomePage } from "@/pages/landing-page";
 import { LoginPage } from "@/pages/login-page";
@@ -57,6 +58,7 @@ export const appRoutes = createRoutesFromElements(
       <Route index element={<Navigate to="home" replace />} />
       <Route path="home" element={<WorkspacePage />} />
       <Route path="statements" element={<AppStatementsPage />} />
+      <Route path="statements/upload" element={<AppStatementUploadPage />} />
       <Route path="dashboard" element={<AppDashboardPage />} />
       <Route path="planner" element={<AppPlannerPage />} />
       <Route path="chat" element={<AppChatPage />} />
