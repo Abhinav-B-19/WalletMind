@@ -1,4 +1,4 @@
-import { createRoutesFromElements, Route } from "react-router-dom";
+import { Navigate, createRoutesFromElements, Route } from "react-router-dom";
 
 import {
   ProtectedRoute,
@@ -54,7 +54,8 @@ export const appRoutes = createRoutesFromElements(
         </ProtectedRoute>
       }
     >
-      <Route index element={<WorkspacePage />} />
+      <Route index element={<Navigate to="home" replace />} />
+      <Route path="home" element={<WorkspacePage />} />
       <Route path="statements" element={<AppStatementsPage />} />
       <Route path="dashboard" element={<AppDashboardPage />} />
       <Route path="planner" element={<AppPlannerPage />} />

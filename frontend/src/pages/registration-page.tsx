@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PageTitle } from "@/components/ui/section-title";
+import { PageTitle, SectionTitle } from "@/components/ui/section-title";
 import { Select } from "@/components/ui/select";
 import { setStoredUser } from "@/lib/auth/storage";
 import { submitRegistration } from "@/lib/api/users";
@@ -73,7 +73,7 @@ export function RegistrationPage() {
     try {
       const user = await submitRegistration(formData);
       setStoredUser(user);
-      navigate("/app", { replace: true });
+      navigate("/app/home", { replace: true });
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -90,184 +90,226 @@ export function RegistrationPage() {
       <div className="space-y-6">
         <PageTitle
           title="Create Your WalletMind Profile"
-          subtitle="Registration acts as onboarding for this release."
+          subtitle="Set up your profile to unlock personalized financial insights."
         />
 
         <Card>
           <CardHeader>
             <CardTitle>Registration</CardTitle>
             <CardDescription>
-              Complete your details to continue to the Workspace.
+              Complete your details to continue to your WalletMind home.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form
-              className="grid gap-4 md:grid-cols-2"
-              onSubmit={handleSubmit}
-              noValidate
-            >
-              <div className="space-y-2 md:col-span-1">
-                <label className="text-sm font-medium" htmlFor="fullName">
-                  Full Name
-                </label>
-                <Input
-                  id="fullName"
-                  value={formData.fullName}
-                  onChange={(event) =>
-                    updateField("fullName", event.target.value)
-                  }
-                  placeholder="e.g., Priya Sharma"
-                  aria-invalid={Boolean(errors.fullName)}
+            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+              <section className="space-y-4">
+                <SectionTitle
+                  title="Personal Information"
+                  subtitle="Tell us a little about you."
                 />
-                {errors.fullName ? (
-                  <p className="text-xs text-[var(--danger)]">
-                    {errors.fullName}
-                  </p>
-                ) : null}
-              </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="fullName">
+                      Full Name
+                    </label>
+                    <Input
+                      id="fullName"
+                      value={formData.fullName}
+                      onChange={(event) =>
+                        updateField("fullName", event.target.value)
+                      }
+                      placeholder="e.g., Priya Sharma"
+                      aria-invalid={Boolean(errors.fullName)}
+                    />
+                    <p className="text-xs text-[var(--text-muted)]">
+                      This will be used in your workspace greeting.
+                    </p>
+                    {errors.fullName ? (
+                      <p className="text-xs text-[var(--danger)]">
+                        {errors.fullName}
+                      </p>
+                    ) : null}
+                  </div>
 
-              <div className="space-y-2 md:col-span-1">
-                <label className="text-sm font-medium" htmlFor="occupation">
-                  Occupation
-                </label>
-                <Input
-                  id="occupation"
-                  value={formData.occupation}
-                  onChange={(event) =>
-                    updateField("occupation", event.target.value)
-                  }
-                  placeholder="e.g., Product Manager"
-                  aria-invalid={Boolean(errors.occupation)}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="occupation">
+                      Occupation
+                    </label>
+                    <Input
+                      id="occupation"
+                      value={formData.occupation}
+                      onChange={(event) =>
+                        updateField("occupation", event.target.value)
+                      }
+                      placeholder="e.g., Product Manager"
+                      aria-invalid={Boolean(errors.occupation)}
+                    />
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Helps WalletMind tailor recommendations.
+                    </p>
+                    {errors.occupation ? (
+                      <p className="text-xs text-[var(--danger)]">
+                        {errors.occupation}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <SectionTitle
+                  title="Financial Information"
+                  subtitle="Core details for your first analysis profile."
                 />
-                {errors.occupation ? (
-                  <p className="text-xs text-[var(--danger)]">
-                    {errors.occupation}
-                  </p>
-                ) : null}
-              </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="monthlyIncome"
+                    >
+                      Monthly Income
+                    </label>
+                    <Input
+                      id="monthlyIncome"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.monthlyIncome}
+                      onChange={(event) =>
+                        updateField("monthlyIncome", event.target.value)
+                      }
+                      placeholder="e.g., 4500"
+                      aria-invalid={Boolean(errors.monthlyIncome)}
+                    />
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Enter your typical monthly post-tax income.
+                    </p>
+                    {errors.monthlyIncome ? (
+                      <p className="text-xs text-[var(--danger)]">
+                        {errors.monthlyIncome}
+                      </p>
+                    ) : null}
+                  </div>
 
-              <div className="space-y-2 md:col-span-1">
-                <label className="text-sm font-medium" htmlFor="monthlyIncome">
-                  Monthly Income
-                </label>
-                <Input
-                  id="monthlyIncome"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.monthlyIncome}
-                  onChange={(event) =>
-                    updateField("monthlyIncome", event.target.value)
-                  }
-                  placeholder="e.g., 4500"
-                  aria-invalid={Boolean(errors.monthlyIncome)}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="currency">
+                      Currency
+                    </label>
+                    <Select
+                      id="currency"
+                      value={formData.currency}
+                      onChange={(event) =>
+                        updateField("currency", event.target.value)
+                      }
+                      aria-invalid={Boolean(errors.currency)}
+                    >
+                      <option value="">Select currency</option>
+                      {CURRENCIES.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
+                    </Select>
+                    {errors.currency ? (
+                      <p className="text-xs text-[var(--danger)]">
+                        {errors.currency}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="primaryGoal"
+                    >
+                      Primary Financial Goal
+                    </label>
+                    <Select
+                      id="primaryGoal"
+                      value={formData.primaryFinancialGoal}
+                      onChange={(event) =>
+                        updateField("primaryFinancialGoal", event.target.value)
+                      }
+                      aria-invalid={Boolean(errors.primaryFinancialGoal)}
+                    >
+                      <option value="">Select primary goal</option>
+                      {FINANCIAL_GOALS.map((goal) => (
+                        <option key={goal} value={goal}>
+                          {goal}
+                        </option>
+                      ))}
+                    </Select>
+                    {errors.primaryFinancialGoal ? (
+                      <p className="text-xs text-[var(--danger)]">
+                        {errors.primaryFinancialGoal}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <SectionTitle
+                  title="Preferences"
+                  subtitle="Optional settings for communication and language."
                 />
-                {errors.monthlyIncome ? (
-                  <p className="text-xs text-[var(--danger)]">
-                    {errors.monthlyIncome}
-                  </p>
-                ) : null}
-              </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="preferredLanguage"
+                    >
+                      Preferred Language (optional)
+                    </label>
+                    <Select
+                      id="preferredLanguage"
+                      value={formData.preferredLanguage}
+                      onChange={(event) =>
+                        updateField("preferredLanguage", event.target.value)
+                      }
+                    >
+                      <option value="">Select language</option>
+                      {LANGUAGES.map((language) => (
+                        <option key={language} value={language}>
+                          {language}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
 
-              <div className="space-y-2 md:col-span-1">
-                <label className="text-sm font-medium" htmlFor="currency">
-                  Currency
-                </label>
-                <Select
-                  id="currency"
-                  value={formData.currency}
-                  onChange={(event) =>
-                    updateField("currency", event.target.value)
-                  }
-                  aria-invalid={Boolean(errors.currency)}
-                >
-                  <option value="">Select currency</option>
-                  {CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </Select>
-                {errors.currency ? (
-                  <p className="text-xs text-[var(--danger)]">
-                    {errors.currency}
-                  </p>
-                ) : null}
-              </div>
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="notificationPreference"
+                    >
+                      Notification Preference (optional)
+                    </label>
+                    <Select
+                      id="notificationPreference"
+                      value={formData.notificationPreference}
+                      onChange={(event) =>
+                        updateField(
+                          "notificationPreference",
+                          event.target.value,
+                        )
+                      }
+                    >
+                      <option value="">Select preference</option>
+                      {NOTIFICATION_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              </section>
 
-              <div className="space-y-2 md:col-span-1">
-                <label className="text-sm font-medium" htmlFor="primaryGoal">
-                  Primary Financial Goal
-                </label>
-                <Select
-                  id="primaryGoal"
-                  value={formData.primaryFinancialGoal}
-                  onChange={(event) =>
-                    updateField("primaryFinancialGoal", event.target.value)
-                  }
-                  aria-invalid={Boolean(errors.primaryFinancialGoal)}
-                >
-                  <option value="">Select primary goal</option>
-                  {FINANCIAL_GOALS.map((goal) => (
-                    <option key={goal} value={goal}>
-                      {goal}
-                    </option>
-                  ))}
-                </Select>
-                {errors.primaryFinancialGoal ? (
-                  <p className="text-xs text-[var(--danger)]">
-                    {errors.primaryFinancialGoal}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2 md:col-span-1">
-                <label
-                  className="text-sm font-medium"
-                  htmlFor="preferredLanguage"
-                >
-                  Preferred Language (optional)
-                </label>
-                <Select
-                  id="preferredLanguage"
-                  value={formData.preferredLanguage}
-                  onChange={(event) =>
-                    updateField("preferredLanguage", event.target.value)
-                  }
-                >
-                  <option value="">Select language</option>
-                  {LANGUAGES.map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <label
-                  className="text-sm font-medium"
-                  htmlFor="notificationPreference"
-                >
-                  Notification Preference (optional placeholder)
-                </label>
-                <Select
-                  id="notificationPreference"
-                  value={formData.notificationPreference}
-                  onChange={(event) =>
-                    updateField("notificationPreference", event.target.value)
-                  }
-                >
-                  <option value="">Select preference</option>
-                  {NOTIFICATION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="md:col-span-2">
+              <section className="space-y-3">
+                <SectionTitle
+                  title="Terms"
+                  subtitle="Review and accept the onboarding agreement."
+                />
                 <label className="flex items-start gap-2 text-sm text-[var(--text-muted)]">
                   <input
                     type="checkbox"
@@ -287,15 +329,13 @@ export function RegistrationPage() {
                     {errors.termsAccepted}
                   </p>
                 ) : null}
-              </div>
+              </section>
 
               {submitError ? (
-                <p className="md:col-span-2 text-sm text-[var(--danger)]">
-                  {submitError}
-                </p>
+                <p className="text-sm text-[var(--danger)]">{submitError}</p>
               ) : null}
 
-              <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={!canSubmit}>
                   {isSubmitting ? "Creating Profile..." : "Create Profile"}
                 </Button>

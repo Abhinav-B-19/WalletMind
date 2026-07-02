@@ -14,7 +14,7 @@ import { clearStoredUser } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { to: "/app", label: "Home", icon: Home, end: true },
+  { to: "/app/home", label: "Home", icon: Home },
   { to: "/app/statements", label: "Statements", icon: FileStack },
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/planner", label: "Planner", icon: Timer },
@@ -46,11 +46,10 @@ export function Sidebar() {
         </div>
         <nav aria-label="Primary" className="flex-1">
           <ul className="space-y-1">
-            {links.map(({ to, label, icon: Icon, end }) => (
+            {links.map(({ to, label, icon: Icon }) => (
               <li key={label}>
                 <NavLink
                   to={to}
-                  end={end}
                   className={({ isActive }) =>
                     cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-[var(--text-muted)] transition-colors",
