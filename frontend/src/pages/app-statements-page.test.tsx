@@ -34,14 +34,18 @@ function makeStatement(
 ) {
   return {
     statement_uuid,
+    stored_file_path: `/tmp/${statement_uuid}.csv`,
     original_filename,
     stored_filename: `${statement_uuid}.csv`,
     file_size,
     file_type: "csv",
     parser_type: "csv",
     bank_name: "Demo Bank",
-    analysis_status: "uploaded" as const,
-    status: "uploaded" as const,
+    classification_confidence: 0.88,
+    classification_method: "header-keyword",
+    classified_at: "2026-07-03T09:00:01.000Z",
+    analysis_status: "ready_for_parsing" as const,
+    status: "ready_for_parsing" as const,
     uploaded_at,
   };
 }

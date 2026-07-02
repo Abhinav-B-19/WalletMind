@@ -24,14 +24,18 @@ describe("statements api contract", () => {
         message: "Statement uploaded successfully.",
         data: {
           statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+          stored_file_path: "/tmp/stored.csv",
           original_filename: "statement.csv",
           stored_filename: "stored.csv",
           file_size: 77,
           file_type: "csv",
           parser_type: "csv",
           bank_name: null,
-          analysis_status: "queued",
-          status: "queued",
+          classification_confidence: 0.88,
+          classification_method: "header-keyword",
+          classified_at: "2026-07-03T09:00:01.000Z",
+          analysis_status: "ready_for_parsing",
+          status: "ready_for_parsing",
           uploaded_at: "2026-07-03T09:00:00.000Z",
         },
       },
@@ -43,8 +47,8 @@ describe("statements api contract", () => {
     });
 
     expect(result.statement_uuid).toBe("8fe70b89-2325-42b6-82a6-16c6268d56eb");
-    expect(result.status).toBe("queued");
-    expect(result.analysis_status).toBe("queued");
+    expect(result.status).toBe("ready_for_parsing");
+    expect(result.analysis_status).toBe("ready_for_parsing");
     expect(result.parser_type).toBe("csv");
   });
 
@@ -57,12 +61,16 @@ describe("statements api contract", () => {
         data: [
           {
             statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+            stored_file_path: "/tmp/stored.csv",
             original_filename: "statement.csv",
             stored_filename: "stored.csv",
             file_size: 77,
             file_type: "csv",
             parser_type: "csv",
             bank_name: null,
+            classification_confidence: 0.88,
+            classification_method: "header-keyword",
+            classified_at: "2026-07-03T09:00:01.000Z",
             analysis_status: "ready_for_parsing",
             status: "ready_for_parsing",
             uploaded_at: "2026-07-03T09:00:00.000Z",

@@ -26,14 +26,18 @@ describe("WorkspacePage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "salary-june.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.88,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -50,6 +54,9 @@ describe("WorkspacePage", () => {
       screen.queryByText("No statements in your library yet"),
     ).not.toBeInTheDocument();
     expect(screen.getByText("1 total statement in your library.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open Statement Library" }),
+    ).toBeInTheDocument();
   });
 
   it("shows empty state only when API returns zero statements", async () => {
@@ -70,12 +77,16 @@ describe("WorkspacePage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "pipeline.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
+        classification_confidence: 0.88,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
         analysis_status: "ready_for_parsing",
         status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -97,12 +108,16 @@ describe("WorkspacePage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "future-state.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
+        classification_confidence: 0.7,
+        classification_method: "metadata",
+        classified_at: "2026-07-03T09:00:01.000Z",
         analysis_status: "analysis_pending",
         status: "analysis_pending",
         uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -127,14 +142,18 @@ describe("WorkspacePage", () => {
     const listSpy = vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "refresh.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.88,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);

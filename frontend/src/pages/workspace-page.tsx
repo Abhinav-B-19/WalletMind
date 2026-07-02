@@ -121,6 +121,8 @@ export function WorkspacePage() {
         .filter((statement) =>
           [
             "uploaded",
+            "classifying",
+            "classified",
             "queued",
             "ready_for_parsing",
             "analysis_pending",
@@ -222,7 +224,7 @@ export function WorkspacePage() {
           <CardHeader>
             <CardTitle className="text-lg">Recent Statements</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex h-[24rem] flex-col gap-4">
             {isLoadingStatements ? (
               <p className="text-sm text-[var(--text-muted)]">
                 Loading recent statements...
@@ -254,7 +256,7 @@ export function WorkspacePage() {
                   {statements.length} total statement
                   {statements.length === 1 ? "" : "s"} in your library.
                 </p>
-                <div className="space-y-2">
+                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                   {recentStatements.map((statement) => (
                     <div
                       key={statement.statement_uuid}
@@ -272,7 +274,7 @@ export function WorkspacePage() {
                     </div>
                   ))}
                 </div>
-                <Button asChild variant="secondary">
+                <Button asChild variant="secondary" className="mt-auto">
                   <Link to="/app/statements">Open Statement Library</Link>
                 </Button>
               </>
@@ -284,7 +286,7 @@ export function WorkspacePage() {
           <CardHeader>
             <CardTitle className="text-lg">Ready For Analysis</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[24rem]">
             {isLoadingStatements ? (
               <p className="text-sm text-[var(--text-muted)]">
                 Loading analysis queue...
@@ -300,7 +302,7 @@ export function WorkspacePage() {
             ) : null}
 
             {!isLoadingStatements && !statementsError && readyForAnalysisStatements.length > 0 ? (
-              <div className="space-y-2">
+              <div className="h-full space-y-2 overflow-y-auto pr-1">
                 {readyForAnalysisStatements.map((statement) => (
                   <div
                     key={statement.statement_uuid}

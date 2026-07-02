@@ -4,8 +4,10 @@ import { z } from "zod";
 import { apiClient } from "@/lib/api/client";
 
 const statementStatusSchema = z.enum([
-  "uploaded",
   "queued",
+  "uploaded",
+  "classifying",
+  "classified",
   "processing",
   "ready_for_parsing",
   "parsed",
@@ -16,12 +18,16 @@ const statementStatusSchema = z.enum([
 
 const uploadDataSchema = z.object({
   statement_uuid: z.string().uuid(),
+  stored_file_path: z.string().optional(),
   original_filename: z.string(),
   stored_filename: z.string(),
   file_size: z.number(),
   file_type: z.string(),
   parser_type: z.string(),
   bank_name: z.string().nullable().optional(),
+  classification_confidence: z.number().nullable().optional(),
+  classification_method: z.string().nullable().optional(),
+  classified_at: z.string().nullable().optional(),
   analysis_status: statementStatusSchema,
   status: statementStatusSchema,
   uploaded_at: z.string(),

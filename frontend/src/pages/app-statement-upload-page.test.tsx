@@ -48,14 +48,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
     vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
       statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f450",
+      stored_file_path: "/tmp/stored.csv",
       original_filename: longName,
       stored_filename: "stored.csv",
       file_size: 77,
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "queued",
-      status: "queued",
+      classification_confidence: 0.82,
+      classification_method: "header-keyword",
+      classified_at: "2026-07-03T09:00:01.000Z",
+      analysis_status: "ready_for_parsing",
+      status: "ready_for_parsing",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -95,14 +99,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
     vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
       statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f451",
+      stored_file_path: "/tmp/stored.csv",
       original_filename: "statement.csv",
       stored_filename: "stored.csv",
       file_size: 77,
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "queued",
-      status: "queued",
+      classification_confidence: 0.82,
+      classification_method: "header-keyword",
+      classified_at: "2026-07-03T09:00:01.000Z",
+      analysis_status: "ready_for_parsing",
+      status: "ready_for_parsing",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -138,14 +146,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
     vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
       statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f452",
+      stored_file_path: "/tmp/stored.csv",
       original_filename: "statement.csv",
       stored_filename: "stored.csv",
       file_size: 77,
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "queued",
-      status: "queued",
+      classification_confidence: 0.82,
+      classification_method: "header-keyword",
+      classified_at: "2026-07-03T09:00:01.000Z",
+      analysis_status: "ready_for_parsing",
+      status: "ready_for_parsing",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 
@@ -177,14 +189,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f453",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "statement.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.82,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -192,14 +208,18 @@ describe("AppStatementUploadPage", () => {
       .spyOn(statementsApi, "uploadStatement")
       .mockResolvedValue({
         statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f454",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "statement.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.82,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       });
 
@@ -235,14 +255,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f455",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "statement.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.82,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -250,14 +274,18 @@ describe("AppStatementUploadPage", () => {
       .spyOn(statementsApi, "uploadStatement")
       .mockResolvedValue({
         statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f456",
+        stored_file_path: "/tmp/stored.csv",
         original_filename: "statement.csv",
         stored_filename: "stored.csv",
         file_size: 77,
         file_type: "csv",
         parser_type: "csv",
         bank_name: null,
-        analysis_status: "queued",
-        status: "queued",
+        classification_confidence: 0.82,
+        classification_method: "header-keyword",
+        classified_at: "2026-07-03T09:00:01.000Z",
+        analysis_status: "ready_for_parsing",
+        status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       });
 
@@ -287,14 +315,18 @@ describe("AppStatementUploadPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
     vi.spyOn(statementsApi, "uploadStatement").mockResolvedValue({
       statement_uuid: "a4b7a8e2-9d50-4c9d-8f6c-53f2d6a8f457",
+      stored_file_path: "/tmp/stored.csv",
       original_filename: "pipeline.csv",
       stored_filename: "stored.csv",
       file_size: 77,
       file_type: "csv",
       parser_type: "csv",
       bank_name: null,
-      analysis_status: "queued",
-      status: "queued",
+      classification_confidence: 0.82,
+      classification_method: "header-keyword",
+      classified_at: "2026-07-03T09:00:01.000Z",
+      analysis_status: "ready_for_parsing",
+      status: "ready_for_parsing",
       uploaded_at: "2026-07-03T09:00:00.000Z",
     });
 

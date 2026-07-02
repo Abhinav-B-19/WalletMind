@@ -58,6 +58,18 @@ function formatFileSize(bytes: number): string {
 }
 
 function getStatusLabel(statement: UploadedStatement): string {
+  if (statement.analysis_status === "ready_for_parsing") {
+    return "Ready For Parsing";
+  }
+
+  if (statement.analysis_status === "classified") {
+    return "Classified";
+  }
+
+  if (statement.analysis_status === "classifying") {
+    return "Classifying";
+  }
+
   if (statement.analysis_status === "parsed") {
     return "Completed";
   }
@@ -71,7 +83,11 @@ function getStatusLabel(statement: UploadedStatement): string {
   }
 
   if (statement.analysis_status === "uploaded") {
-    return "Ready for Analysis";
+    return "Uploaded";
+  }
+
+  if (statement.analysis_status === "queued") {
+    return "Queued";
   }
 
   return "Uploaded";
@@ -226,7 +242,12 @@ export function AppStatementsPage() {
       }
 
       if (filter === "ready") {
-        return statement.analysis_status === "uploaded";
+        return [
+          "uploaded",
+          "classifying",
+          "classified",
+          "ready_for_parsing",
+        ].includes(statement.analysis_status);
       }
 
       if (filter === "processing") {
@@ -262,7 +283,13 @@ export function AppStatementsPage() {
   const summary = useMemo(() => {
     const totalStatements = statements.length;
     const readyForAnalysis = statements.filter(
-      (statement) => statement.analysis_status === "uploaded",
+      (statement) =>
+        [
+          "uploaded",
+          "classifying",
+          "classified",
+          "ready_for_parsing",
+        ].includes(statement.analysis_status),
     ).length;
     const processing = statements.filter(
       (statement) => statement.analysis_status === "processing",
