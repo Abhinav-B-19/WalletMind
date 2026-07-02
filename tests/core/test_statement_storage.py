@@ -163,16 +163,16 @@ def test_statement_schema_validation_enforces_constraints() -> None:
             file_size=0,
         )
 
-    with pytest.raises(ValidationError):
-        StatementCreate(
-            user_id=1,
-            original_filename="apr_statement.pdf",
-            stored_filename="uuid-apr.pdf",
-            bank_name="Bank Beta",
-            file_type="application/pdf",
-            file_size=2048,
-            status="queued",
-        )
+    queued = StatementCreate(
+        user_id=1,
+        original_filename="apr_statement.pdf",
+        stored_filename="uuid-apr.pdf",
+        bank_name="Bank Beta",
+        file_type="application/pdf",
+        file_size=2048,
+        status="queued",
+    )
+    assert queued.status == StatementStatus.QUEUED
 
     parsed = StatementRead.model_validate(
         {

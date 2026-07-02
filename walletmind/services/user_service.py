@@ -23,6 +23,8 @@ class _UserRecord:
     name: str
     occupation: str
     monthly_income: float
+    currency: str
+    primary_financial_goal: str
 
 
 class InMemoryUserStore:
@@ -70,6 +72,8 @@ class UserService:
             name=create_dto.name,
             occupation=create_dto.occupation,
             monthly_income=create_dto.monthly_income,
+            currency=create_dto.currency,
+            primary_financial_goal=create_dto.primary_financial_goal,
         )
         self._store.add(record)
         return self._to_dto(record)
@@ -108,6 +112,10 @@ class UserService:
         record.occupation = next_occupation
         if "monthly_income" in updates:
             record.monthly_income = updates["monthly_income"]
+        if "currency" in updates:
+            record.currency = updates["currency"]
+        if "primary_financial_goal" in updates:
+            record.primary_financial_goal = updates["primary_financial_goal"]
         return self._to_dto(record)
 
     def delete_user(self, user_id: UUID) -> None:
@@ -136,6 +144,8 @@ class UserService:
                 full_name=create_dto.name,
                 occupation=create_dto.occupation,
                 monthly_income=Decimal(str(create_dto.monthly_income)),
+                currency=create_dto.currency,
+                financial_goal=create_dto.primary_financial_goal,
             )
             session.add(user)
             session.commit()
@@ -169,6 +179,10 @@ class UserService:
             user.occupation = next_occupation
             if "monthly_income" in updates:
                 user.monthly_income = Decimal(str(updates["monthly_income"]))
+            if "currency" in updates:
+                user.currency = updates["currency"]
+            if "primary_financial_goal" in updates:
+                user.financial_goal = updates["primary_financial_goal"]
             session.commit()
             session.refresh(user)
             return self._to_dto_db(user)
@@ -250,6 +264,8 @@ class UserService:
             name=record.name,
             occupation=record.occupation,
             monthly_income=record.monthly_income,
+            currency=record.currency,
+            primary_financial_goal=record.primary_financial_goal,
         )
 
     @staticmethod
@@ -259,4 +275,6 @@ class UserService:
             name=record.full_name,
             occupation=record.occupation or "",
             monthly_income=float(record.monthly_income),
+            currency=record.currency,
+            primary_financial_goal=record.financial_goal,
         )

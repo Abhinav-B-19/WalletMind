@@ -28,6 +28,8 @@ def _create_user_payload(
         "name": name,
         "occupation": occupation,
         "monthly_income": monthly_income,
+        "currency": "USD",
+        "primary_financial_goal": "Build Emergency Fund",
     }
 
 
@@ -44,6 +46,8 @@ def test_create_user_success() -> None:
     assert body["data"]["name"] == "Alex"
     assert body["data"]["occupation"] == "Engineer"
     assert body["data"]["monthly_income"] == 6000
+    assert body["data"]["currency"] == "USD"
+    assert body["data"]["primary_financial_goal"] == "Build Emergency Fund"
     assert "id" in body["data"]
 
 
@@ -78,6 +82,8 @@ def test_get_user_success() -> None:
     assert body["success"] is True
     assert body["message"] == "User retrieved successfully."
     assert body["data"]["id"] == user_id
+    assert body["data"]["currency"] == "USD"
+    assert body["data"]["primary_financial_goal"] == "Build Emergency Fund"
 
 
 def test_get_user_validation_failure_for_invalid_uuid() -> None:
@@ -101,7 +107,12 @@ def test_update_user_success() -> None:
 
     response = client.put(
         f"/api/v1/users/{user_id}",
-        json={"occupation": "Senior Engineer", "monthly_income": 7500},
+        json={
+            "occupation": "Senior Engineer",
+            "monthly_income": 7500,
+            "currency": "INR",
+            "primary_financial_goal": "Pay Off Debt",
+        },
     )
 
     assert response.status_code == 200
@@ -110,6 +121,8 @@ def test_update_user_success() -> None:
     assert body["message"] == "User updated successfully."
     assert body["data"]["occupation"] == "Senior Engineer"
     assert body["data"]["monthly_income"] == 7500
+    assert body["data"]["currency"] == "INR"
+    assert body["data"]["primary_financial_goal"] == "Pay Off Debt"
 
 
 def test_update_user_validation_failure() -> None:
@@ -180,6 +193,8 @@ def test_list_users_success() -> None:
     assert body["message"] == "Users retrieved successfully."
     assert isinstance(body["data"], list)
     assert len(body["data"]) == 2
+    assert all("currency" in user for user in body["data"])
+    assert all("primary_financial_goal" in user for user in body["data"])
 
 
 def test_duplicate_user_returns_standardized_error() -> None:

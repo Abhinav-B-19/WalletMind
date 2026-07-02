@@ -1,6 +1,7 @@
 ﻿"""Tests for the WalletMind database foundation."""
 
 from decimal import Decimal
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import inspect, select
@@ -53,7 +54,12 @@ def test_database_initialization_creates_user_table() -> None:
         "bank_name",
         "file_type",
         "file_size",
+        "detected_file_type",
+        "parser_type",
         "status",
+        "processing_started_at",
+        "processing_completed_at",
+        "processing_error",
         "uploaded_at",
         "updated_at",
     }.issubset(statement_columns)
@@ -91,3 +97,60 @@ def test_user_model_persists_with_generated_uuid_and_timestamps() -> None:
     assert persisted_user.full_name == "Ada Lovelace"
     assert persisted_user.created_at is not None
     assert persisted_user.updated_at is not None
+
+
+def test_init_database_reconciles_stale_statement_schema(tmp_path: Path) -> None:
+    """init_database adds newly required statement columns on existing SQLite tables."""
+
+    database_path = tmp_path / "stale.db"
+    database_engine = create_database_engine(f"sqlite+pysqlite:///{database_path.as_posix()}")
+
+    with database_engine.begin() as connection:
+        connection.exec_driver_sql(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid VARCHAR(36) NOT NULL UNIQUE,
+                full_name VARCHAR(120) NOT NULL,
+                occupation VARCHAR(120),
+                monthly_income NUMERIC(12, 2) NOT NULL,
+                currency VARCHAR(3) NOT NULL,
+                financial_goal VARCHAR(500),
+                created_at DATETIME,
+                updated_at DATETIME
+            )
+            """
+        )
+        connection.exec_driver_sql(
+            """
+            CREATE TABLE statements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid VARCHAR(36) NOT NULL UNIQUE,
+                user_id INTEGER NOT NULL,
+                original_filename VARCHAR(255) NOT NULL,
+                stored_filename VARCHAR(255) NOT NULL,
+                bank_name VARCHAR(120),
+                file_type VARCHAR(32) NOT NULL,
+                file_size INTEGER NOT NULL,
+                status VARCHAR(10) NOT NULL,
+                uploaded_at DATETIME,
+                updated_at DATETIME,
+                FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+            """
+        )
+
+    init_database(database_engine)
+
+    inspector = inspect(database_engine)
+    statement_columns = {
+        column["name"] for column in inspector.get_columns("statements")
+    }
+
+    assert {
+        "detected_file_type",
+        "parser_type",
+        "processing_started_at",
+        "processing_completed_at",
+        "processing_error",
+    }.issubset(statement_columns)

@@ -1,5 +1,6 @@
 """Database initialization helpers for WalletMind."""
 
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 from backend.app.core.config import DATABASE_DIR
@@ -17,6 +18,49 @@ def init_database(database_engine: Engine = engine) -> None:
     """
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=database_engine)
+    _reconcile_sqlite_statement_schema(database_engine)
+
+
+def _reconcile_sqlite_statement_schema(database_engine: Engine) -> None:
+    """Add newly introduced nullable statement columns when table already exists.
+
+    SQLite `create_all` does not alter existing tables, so we patch drifted dev
+    databases by adding missing columns in-place without deleting data.
+    """
+
+    if database_engine.dialect.name != "sqlite":
+        return
+
+    inspector = inspect(database_engine)
+    if "statements" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("statements")
+    }
+    missing_columns = {
+        "detected_file_type": "VARCHAR(32)",
+        "parser_type": "VARCHAR(32)",
+        "processing_started_at": "DATETIME",
+        "processing_completed_at": "DATETIME",
+        "processing_error": "VARCHAR(500)",
+    }
+
+    statements = []
+    for column_name, column_type in missing_columns.items():
+        if column_name not in existing_columns:
+            statements.append(
+                text(
+                    f"ALTER TABLE statements ADD COLUMN {column_name} {column_type}"  # noqa: S608
+                )
+            )
+
+    if not statements:
+        return
+
+    with database_engine.begin() as connection:
+        for statement in statements:
+            connection.execute(statement)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ from backend.app.api.router import api_router
 from backend.app.core.config import STORAGE_DIR
 from backend.app.database.init_db import init_database
 from backend.app.database.session import SessionLocal
+from walletmind.services.processing_dispatcher import ProcessingDispatcher
+from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.user_service import UserService
 
@@ -59,6 +61,12 @@ def create_app() -> FastAPI:
     app.state.statement_upload_service = StatementUploadService(
         session_factory=SessionLocal,
         upload_dir=STORAGE_DIR / "uploads",
+    )
+    app.state.statement_processing_service = StatementProcessingService(
+        session_factory=SessionLocal,
+    )
+    app.state.processing_dispatcher = ProcessingDispatcher(
+        processing_service=app.state.statement_processing_service,
     )
     app.include_router(api_router)
     register_error_handlers(app)

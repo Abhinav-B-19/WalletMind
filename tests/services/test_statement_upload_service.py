@@ -181,7 +181,7 @@ def test_upload_assigns_parser_type_for_csv_and_excel(tmp_path) -> None:
     assert xlsx_response.parser_type == "excel"
 
 
-def test_upload_assigns_analysis_status_uploaded(tmp_path) -> None:
+def test_upload_assigns_analysis_status_queued(tmp_path) -> None:
     service, session_factory = _build_service(tmp_path)
     user = _create_user(session_factory)
 
@@ -191,8 +191,8 @@ def test_upload_assigns_analysis_status_uploaded(tmp_path) -> None:
         file_bytes=b"date,amount\n2026-07-01,100\n",
     )
 
-    assert response.status == "uploaded"
-    assert response.analysis_status == "uploaded"
+    assert response.status == "queued"
+    assert response.analysis_status == "queued"
 
 
 def test_upload_sanitizes_original_filename(tmp_path) -> None:
@@ -214,3 +214,22 @@ def test_upload_sanitizes_original_filename(tmp_path) -> None:
 
     assert statement is not None
     assert statement.original_filename == "bad_name_1_.csv"
+
+
+def test_upload_persists_statement_with_queued_status(tmp_path) -> None:
+    service, session_factory = _build_service(tmp_path)
+    user = _create_user(session_factory)
+
+    response = service.upload_statement(
+        user_uuid=user.uuid,
+        original_filename="queued_check.csv",
+        file_bytes=b"date,amount\n2026-07-01,100\n",
+    )
+
+    with session_factory() as session:
+        statement = session.scalar(
+            select(Statement).where(Statement.uuid == str(response.statement_uuid))
+        )
+
+    assert statement is not None
+    assert statement.status.value == "queued"

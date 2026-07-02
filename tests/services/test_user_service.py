@@ -17,12 +17,16 @@ def test_create_and_get_user() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
 
     fetched = service.get_user_by_uuid(created.id)
 
     assert fetched == created
+    assert fetched.currency == "USD"
+    assert fetched.primary_financial_goal == "Build Emergency Fund"
 
 
 def test_list_users_returns_all_created_users() -> None:
@@ -33,6 +37,8 @@ def test_list_users_returns_all_created_users() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
     second = service.create_user(
@@ -40,6 +46,8 @@ def test_list_users_returns_all_created_users() -> None:
             "name": "Mina",
             "occupation": "Designer",
             "monthly_income": 5400,
+            "currency": "INR",
+            "primary_financial_goal": "Save for Home",
         }
     )
 
@@ -56,6 +64,8 @@ def test_update_user_updates_selected_fields() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
 
@@ -64,6 +74,8 @@ def test_update_user_updates_selected_fields() -> None:
         {
             "occupation": "Senior Engineer",
             "monthly_income": 7200,
+            "currency": "INR",
+            "primary_financial_goal": "Pay Off Debt",
         },
     )
 
@@ -71,6 +83,8 @@ def test_update_user_updates_selected_fields() -> None:
     assert updated.name == "Alex"
     assert updated.occupation == "Senior Engineer"
     assert updated.monthly_income == 7200
+    assert updated.currency == "INR"
+    assert updated.primary_financial_goal == "Pay Off Debt"
 
 
 def test_delete_user_removes_user() -> None:
@@ -80,6 +94,8 @@ def test_delete_user_removes_user() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
 
@@ -96,6 +112,8 @@ def test_create_user_rejects_duplicate_name_and_occupation() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
 
@@ -105,6 +123,8 @@ def test_create_user_rejects_duplicate_name_and_occupation() -> None:
                 "name": "  alex  ",
                 "occupation": " engineer ",
                 "monthly_income": 7000,
+                "currency": "USD",
+                "primary_financial_goal": "Save for Home",
             }
         )
 
@@ -116,6 +136,8 @@ def test_update_user_rejects_duplicate_name_and_occupation() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
     other = service.create_user(
@@ -123,6 +145,8 @@ def test_update_user_rejects_duplicate_name_and_occupation() -> None:
             "name": "Mina",
             "occupation": "Designer",
             "monthly_income": 5400,
+            "currency": "INR",
+            "primary_financial_goal": "Save for Home",
         }
     )
 
@@ -139,6 +163,8 @@ def test_create_user_validates_required_fields() -> None:
                 "name": "",
                 "occupation": "Engineer",
                 "monthly_income": 6000,
+                "currency": "USD",
+                "primary_financial_goal": "Build Emergency Fund",
             }
         )
 
@@ -152,6 +178,8 @@ def test_create_user_validates_monthly_income() -> None:
                 "name": "Alex",
                 "occupation": "Engineer",
                 "monthly_income": 0,
+                "currency": "USD",
+                "primary_financial_goal": "Build Emergency Fund",
             }
         )
 
@@ -163,6 +191,8 @@ def test_update_user_validates_monthly_income() -> None:
             "name": "Alex",
             "occupation": "Engineer",
             "monthly_income": 6000,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         }
     )
 

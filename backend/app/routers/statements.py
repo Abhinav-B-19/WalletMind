@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile, status
 
-from backend.app.api.dependencies import get_statement_upload_service
+from backend.app.api.dependencies import (
+    get_processing_dispatcher,
+    get_statement_upload_service,
+)
 from backend.app.api.schemas import ErrorResponse
 from backend.app.schemas.response import ApiResponse, DeleteStatusData
 from walletmind.schemas.statement import UploadResponseDTO
+from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
 
 router = APIRouter(prefix="/statements", tags=["statements"])
@@ -31,9 +35,11 @@ error_responses = {
     responses=error_responses,
 )
 async def upload_statement(
+    background_tasks: BackgroundTasks,
     user_uuid: UUID = Form(...),
     file: UploadFile = File(...),
     service: StatementUploadService = Depends(get_statement_upload_service),
+    dispatcher: ProcessingDispatcher = Depends(get_processing_dispatcher),
 ) -> ApiResponse[UploadResponseDTO]:
     """Upload a statement file and persist metadata."""
 
@@ -42,6 +48,12 @@ async def upload_statement(
         user_uuid=user_uuid,
         original_filename=file.filename or "",
         file_bytes=file_bytes,
+    )
+    dispatcher.dispatch(
+        background_tasks=background_tasks,
+        statement_uuid=statement.statement_uuid,
+        original_filename=statement.original_filename,
+        content_type=file.content_type,
     )
     return ApiResponse(message="Statement uploaded successfully.", data=statement)
 

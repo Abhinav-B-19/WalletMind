@@ -14,8 +14,12 @@ class StatementStatus(str, Enum):
     """Supported statement processing states."""
 
     UPLOADED = "uploaded"
+    QUEUED = "queued"
     PROCESSING = "processing"
+    READY_FOR_PARSING = "ready_for_parsing"
     PARSED = "parsed"
+    ANALYSIS_PENDING = "analysis_pending"
+    COMPLETED = "completed"
     FAILED = "failed"
 
 

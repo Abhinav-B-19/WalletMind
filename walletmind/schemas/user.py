@@ -13,13 +13,25 @@ class UserCreateDTO(BaseModel):
     name: str = Field(..., min_length=1)
     occupation: str = Field(..., min_length=1)
     monthly_income: float
+    currency: str = Field(..., min_length=1, max_length=3)
+    primary_financial_goal: str = Field(..., min_length=1, max_length=500)
 
-    @field_validator("name", "occupation")
+    @field_validator("name", "occupation", "primary_financial_goal")
     @classmethod
     def validate_required_text(cls, value: str) -> str:
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("field is required")
+        return cleaned
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, value: str) -> str:
+        cleaned = value.strip().upper()
+        if not cleaned:
+            raise ValueError("field is required")
+        if len(cleaned) != 3:
+            raise ValueError("currency must be a 3-letter code")
         return cleaned
 
     @field_validator("monthly_income")
@@ -36,8 +48,10 @@ class UserUpdateDTO(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     occupation: str | None = Field(default=None, min_length=1)
     monthly_income: float | None = None
+    currency: str | None = Field(default=None, min_length=1, max_length=3)
+    primary_financial_goal: str | None = Field(default=None, min_length=1, max_length=500)
 
-    @field_validator("name", "occupation")
+    @field_validator("name", "occupation", "primary_financial_goal")
     @classmethod
     def validate_optional_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -45,6 +59,18 @@ class UserUpdateDTO(BaseModel):
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("field is required")
+        return cleaned
+
+    @field_validator("currency")
+    @classmethod
+    def validate_optional_currency(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        cleaned = value.strip().upper()
+        if not cleaned:
+            raise ValueError("field is required")
+        if len(cleaned) != 3:
+            raise ValueError("currency must be a 3-letter code")
         return cleaned
 
     @field_validator("monthly_income")
@@ -66,3 +92,5 @@ class UserDTO(BaseModel):
     name: str
     occupation: str
     monthly_income: float
+    currency: str
+    primary_financial_goal: str | None = None

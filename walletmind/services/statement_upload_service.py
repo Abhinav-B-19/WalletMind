@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from uuid import UUID
 
@@ -27,6 +28,8 @@ from walletmind.utils.file_uploads import (
     parser_type_for_extension,
     sanitize_filename,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class StatementUploadService:
@@ -95,12 +98,22 @@ class StatementUploadService:
                     stored_filename=stored_filename,
                     file_type=extension.lstrip("."),
                     file_size=file_size,
-                    status=StatementStatus.UPLOADED,
+                    status=StatementStatus.QUEUED,
                     bank_name=None,
                 )
                 session.add(statement)
                 session.commit()
                 session.refresh(statement)
+                logger.info(
+                    "Statement uploaded",
+                    extra={
+                        "statement_uuid": statement.uuid,
+                        "user_id": statement.user_id,
+                        "status": statement.status.value,
+                        "file_type": statement.file_type,
+                        "original_filename": statement.original_filename,
+                    },
+                )
                 return self._to_upload_response(statement, parser_type=parser_type)
         except (UserNotFoundError, UnsupportedFileTypeError, EmptyFileError, FileTooLargeError):
             raise
@@ -187,10 +200,10 @@ class StatementUploadService:
             stored_filename=statement.stored_filename,
             file_size=statement.file_size,
             file_type=statement.file_type,
-            parser_type=parser_type,
+            parser_type=statement.parser_type or parser_type,
             bank_name=statement.bank_name,
-            analysis_status=StatementStatus.UPLOADED,
-            status=StatementStatus.UPLOADED,
+            analysis_status=statement.status,
+            status=statement.status,
             uploaded_at=statement.uploaded_at,
         )
 

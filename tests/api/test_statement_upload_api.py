@@ -12,7 +12,10 @@ from backend.app.database.session import SessionLocal, create_database_engine, c
 from backend.app.main import create_app
 from backend.app.models.statement import Statement
 from backend.app.models.user import User
+from walletmind.services.processing_dispatcher import ProcessingDispatcher
+from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
+from walletmind.services.user_service import UserService
 
 
 @pytest.fixture(autouse=True)
@@ -23,16 +26,23 @@ def _reset_database() -> None:
         session.commit()
 
 
-def _setup_client_with_statement_service(tmp_path):
+def _setup_client_with_statement_service(tmp_path, processing_dispatcher: ProcessingDispatcher | None = None):
     database_url = f"sqlite+pysqlite:///{(tmp_path / 'api-test.db').as_posix()}"
     database_engine = create_database_engine(database_url)
     session_factory = create_session_factory(database_engine)
     init_database(database_engine)
 
     app = create_app()
+    app.state.user_service = UserService(session_factory=session_factory)
     app.state.statement_upload_service = StatementUploadService(
         session_factory=session_factory,
         upload_dir=tmp_path / "uploads",
+    )
+    app.state.statement_processing_service = StatementProcessingService(
+        session_factory=session_factory,
+    )
+    app.state.processing_dispatcher = processing_dispatcher or ProcessingDispatcher(
+        processing_service=app.state.statement_processing_service,
     )
 
     client = TestClient(app)
@@ -71,8 +81,8 @@ def test_statement_upload_endpoint(tmp_path) -> None:
     assert body["data"]["statement_uuid"]
     assert body["data"]["original_filename"] == "june.csv"
     assert body["data"]["file_type"] == "csv"
-    assert body["data"]["analysis_status"] == "uploaded"
-    assert body["data"]["status"] == "uploaded"
+    assert body["data"]["analysis_status"] == "queued"
+    assert body["data"]["status"] == "queued"
 
 
 def test_statement_list_endpoint(tmp_path) -> None:
@@ -219,9 +229,8 @@ def test_statement_delete_endpoint(tmp_path) -> None:
     assert get_error["code"] == "STATEMENT_NOT_FOUND"
 
 
-def test_create_user_then_upload_statement_uses_same_database() -> None:
-    app = create_app()
-    client = TestClient(app)
+def test_create_user_then_upload_statement_uses_same_database(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
 
     create_user_response = client.post(
         "/api/v1/users",
@@ -229,6 +238,8 @@ def test_create_user_then_upload_statement_uses_same_database() -> None:
             "name": "Jordan Blake",
             "occupation": "Analyst",
             "monthly_income": 6100,
+            "currency": "USD",
+            "primary_financial_goal": "Build Emergency Fund",
         },
     )
     assert create_user_response.status_code == 201
@@ -242,7 +253,7 @@ def test_create_user_then_upload_statement_uses_same_database() -> None:
     assert upload_response.status_code == 201
     statement_uuid = upload_response.json()["data"]["statement_uuid"]
 
-    with SessionLocal() as session:
+    with session_factory() as session:
         users = session.scalars(select(User)).all()
         statements = session.scalars(select(Statement)).all()
 
@@ -255,3 +266,68 @@ def test_create_user_then_upload_statement_uses_same_database() -> None:
     assert len(matched_users) == 1
     assert len(matched_statements) == 1
     assert matched_statements[0].user_id == matched_users[0].id
+
+
+def test_upload_pipeline_transitions_to_ready_for_parsing(tmp_path) -> None:
+    client, session_factory = _setup_client_with_statement_service(tmp_path)
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={"file": ("pipeline.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+    )
+
+    assert response.status_code == 201
+    statement_uuid = response.json()["data"]["statement_uuid"]
+    assert response.json()["data"]["status"] == "queued"
+
+    with session_factory() as session:
+        statement = session.scalar(select(Statement).where(Statement.uuid == statement_uuid))
+
+    assert statement is not None
+    assert statement.status.value == "ready_for_parsing"
+    assert statement.detected_file_type == "csv"
+    assert statement.parser_type == "csv"
+    assert statement.processing_started_at is not None
+    assert statement.processing_completed_at is not None
+
+
+def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
+    class _SpyDispatcher:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, str | None]] = []
+
+        def dispatch(
+            self,
+            *,
+            background_tasks,
+            statement_uuid,
+            original_filename: str,
+            content_type: str | None = None,
+        ) -> None:
+            self.calls.append(
+                {
+                    "statement_uuid": str(statement_uuid),
+                    "original_filename": original_filename,
+                    "content_type": content_type,
+                }
+            )
+
+    spy_dispatcher = _SpyDispatcher()
+    client, session_factory = _setup_client_with_statement_service(
+        tmp_path,
+        processing_dispatcher=spy_dispatcher,
+    )
+    user = _create_persisted_user(session_factory)
+
+    response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user.uuid},
+        files={"file": ("dispatch.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+    )
+
+    assert response.status_code == 201
+    assert len(spy_dispatcher.calls) == 1
+    assert spy_dispatcher.calls[0]["original_filename"] == "dispatch.csv"
+    assert spy_dispatcher.calls[0]["content_type"] == "text/csv"
