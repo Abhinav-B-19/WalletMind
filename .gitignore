@@ -178,3 +178,23 @@ pnpm-lock.yaml
 
 .marimo/
 .streamlit/secrets.toml
+
+# Runtime data
+storage/database/*
+!storage/database/.gitkeep
+storage/database/*.db
+
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+storage/cache/*
+!storage/cache/.gitkeep
+
+storage/memory/*
+!storage/memory/.gitkeep
+
+storage/reports/*
+!storage/reports/.gitkeep
+
+storage/sessions/*
+!storage/sessions/.gitkeep
