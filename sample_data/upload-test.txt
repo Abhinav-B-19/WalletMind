@@ -1,0 +1,1 @@
+This extension should be rejected by client validation.

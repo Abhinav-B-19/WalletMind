@@ -9,7 +9,11 @@ type EmptyStateProps = {
   icon?: LucideIcon;
 };
 
-export function EmptyState({ title, description, icon: Icon = Inbox }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  icon: Icon = Inbox,
+}: EmptyStateProps) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 p-8 text-center">

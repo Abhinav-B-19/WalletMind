@@ -63,7 +63,9 @@ export function WorkspacePage() {
       <section>
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Welcome back, {user?.name ?? "User"}</CardTitle>
+            <CardTitle className="text-lg">
+              Welcome back, {user?.name ?? "User"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-[var(--text-muted)]">
@@ -74,7 +76,10 @@ export function WorkspacePage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Monthly Income" value={user?.monthly_income ? `${user.monthly_income}` : "Not set"} />
+        <StatCard
+          label="Monthly Income"
+          value={user?.monthly_income ? `${user.monthly_income}` : "Not set"}
+        />
         <StatCard label="Currency" value="USD" />
         <StatCard label="Primary Financial Goal" value="Financial Planning" />
         <StatCard label="Registered Since" value={registrationDate} />
@@ -86,27 +91,38 @@ export function WorkspacePage() {
           subtitle="Move quickly through your wallet workspace."
         />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {QUICK_ACTIONS.map(({ title, description, icon: Icon, href, comingSoon }) => (
-            <Card key={title} className="h-full transition-transform hover:translate-y-[-1px]">
-              <CardContent className="flex h-full flex-col gap-4 p-5">
-                <div className="inline-flex items-center self-start rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] px-2.5 py-2">
-                  <Icon className="h-[var(--icon-lg)] w-[var(--icon-lg)] text-[var(--primary)]" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-base font-semibold">{title}</p>
-                  <p className="text-sm text-[var(--text-muted)]">
-                    {description ?? "Feature will be available in an upcoming release."}
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="secondary" className="mt-auto w-full justify-between">
-                  <Link to={href}>
-                    {comingSoon ? "Coming Soon" : "Open"}
-                    <ArrowRight className="h-[var(--icon-sm)] w-[var(--icon-sm)]" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {QUICK_ACTIONS.map(
+            ({ title, description, icon: Icon, href, comingSoon }) => (
+              <Card
+                key={title}
+                className="h-full transition-transform hover:translate-y-[-1px]"
+              >
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                  <div className="inline-flex items-center self-start rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] px-2.5 py-2">
+                    <Icon className="h-[var(--icon-lg)] w-[var(--icon-lg)] text-[var(--primary)]" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-base font-semibold">{title}</p>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      {description ??
+                        "Feature will be available in an upcoming release."}
+                    </p>
+                  </div>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="secondary"
+                    className="mt-auto w-full justify-between"
+                  >
+                    <Link to={href}>
+                      {comingSoon ? "Coming Soon" : "Open"}
+                      <ArrowRight className="h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ),
+          )}
         </div>
       </section>
 
@@ -152,7 +168,9 @@ export function WorkspacePage() {
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{title}</p>
-                  <Badge variant="muted" className="mt-2">Coming Soon</Badge>
+                  <Badge variant="muted" className="mt-2">
+                    Coming Soon
+                  </Badge>
                 </div>
                 <Icon className="h-[var(--icon-md)] w-[var(--icon-md)] flex-shrink-0 text-[var(--text-muted)]" />
               </CardContent>

@@ -14,8 +14,12 @@ export function TopHeader() {
             WM
           </div>
           <div>
-            <h1 className="text-base font-semibold tracking-tight md:text-lg">WalletMind</h1>
-          <p className="text-xs text-[var(--text-muted)]">AI Financial Concierge</p>
+            <h1 className="text-base font-semibold tracking-tight md:text-lg">
+              WalletMind
+            </h1>
+            <p className="text-xs text-[var(--text-muted)]">
+              AI Financial Concierge
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
