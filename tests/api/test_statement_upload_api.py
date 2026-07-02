@@ -3,12 +3,24 @@ from __future__ import annotations
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
+import pytest
+from sqlalchemy import select
+from sqlalchemy import delete
 
 from backend.app.database.init_db import init_database
-from backend.app.database.session import create_database_engine, create_session_factory
+from backend.app.database.session import SessionLocal, create_database_engine, create_session_factory
 from backend.app.main import create_app
+from backend.app.models.statement import Statement
 from backend.app.models.user import User
 from walletmind.services.statement_upload_service import StatementUploadService
+
+
+@pytest.fixture(autouse=True)
+def _reset_database() -> None:
+    with SessionLocal() as session:
+        session.execute(delete(Statement))
+        session.execute(delete(User))
+        session.commit()
 
 
 def _setup_client_with_statement_service(tmp_path):
@@ -120,3 +132,41 @@ def test_statement_delete_endpoint(tmp_path) -> None:
     get_response = client.get(f"/api/v1/statements/{statement_uuid}")
     assert get_response.status_code == 404
     assert get_response.json()["code"] == "STATEMENT_NOT_FOUND"
+
+
+def test_create_user_then_upload_statement_uses_same_database() -> None:
+    app = create_app()
+    client = TestClient(app)
+
+    create_user_response = client.post(
+        "/api/v1/users",
+        json={
+            "name": "Jordan Blake",
+            "occupation": "Analyst",
+            "monthly_income": 6100,
+        },
+    )
+    assert create_user_response.status_code == 201
+    user_uuid = create_user_response.json()["id"]
+
+    upload_response = client.post(
+        "/api/v1/statements/upload",
+        data={"user_uuid": user_uuid},
+        files={"file": ("income.csv", b"date,amount\n2026-07-01,300\n", "text/csv")},
+    )
+    assert upload_response.status_code == 201
+    statement_uuid = upload_response.json()["statement_uuid"]
+
+    with SessionLocal() as session:
+        users = session.scalars(select(User)).all()
+        statements = session.scalars(select(Statement)).all()
+
+    assert len(users) == 1
+    assert len(statements) == 1
+
+    matched_users = [user for user in users if user.uuid == user_uuid]
+    matched_statements = [statement for statement in statements if statement.uuid == statement_uuid]
+
+    assert len(matched_users) == 1
+    assert len(matched_statements) == 1
+    assert matched_statements[0].user_id == matched_users[0].id

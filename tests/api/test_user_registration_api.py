@@ -1,8 +1,22 @@
 from __future__ import annotations
 
+import pytest
+from sqlalchemy import delete
+
+from backend.app.database.session import SessionLocal
+from backend.app.models.statement import Statement
+from backend.app.models.user import User
 from fastapi.testclient import TestClient
 
 from backend.app.main import create_app
+
+
+@pytest.fixture(autouse=True)
+def _reset_database() -> None:
+    with SessionLocal() as session:
+        session.execute(delete(Statement))
+        session.execute(delete(User))
+        session.commit()
 
 
 def _create_user_payload(

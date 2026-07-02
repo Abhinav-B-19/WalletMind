@@ -55,7 +55,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.state.user_service = UserService()
+    app.state.user_service = UserService(session_factory=SessionLocal)
     app.state.statement_upload_service = StatementUploadService(
         session_factory=SessionLocal,
         upload_dir=STORAGE_DIR / "uploads",
