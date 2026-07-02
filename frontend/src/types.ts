@@ -4,6 +4,9 @@ export type RegistrationFormData = {
   monthlyIncome: string;
   currency: string;
   primaryFinancialGoal: string;
+  preferredLanguage: string;
+  notificationPreference: string;
+  termsAccepted: boolean;
 };
 
 export type RegistrationErrors = Partial<

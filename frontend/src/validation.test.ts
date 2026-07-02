@@ -10,6 +10,9 @@ describe("validateRegistrationForm", () => {
       monthlyIncome: "",
       currency: "",
       primaryFinancialGoal: "",
+      preferredLanguage: "",
+      notificationPreference: "",
+      termsAccepted: false,
     });
 
     expect(result.fullName).toBe("Full Name is required.");
@@ -18,6 +21,9 @@ describe("validateRegistrationForm", () => {
     expect(result.currency).toBe("Please select a currency.");
     expect(result.primaryFinancialGoal).toBe(
       "Please select a primary financial goal.",
+    );
+    expect(result.termsAccepted).toBe(
+      "You must accept Terms & Conditions to continue.",
     );
   });
 
@@ -28,6 +34,9 @@ describe("validateRegistrationForm", () => {
       monthlyIncome: "0",
       currency: "USD",
       primaryFinancialGoal: "Build Emergency Fund",
+      preferredLanguage: "",
+      notificationPreference: "",
+      termsAccepted: true,
     });
 
     const invalidResult = validateRegistrationForm({
@@ -36,6 +45,9 @@ describe("validateRegistrationForm", () => {
       monthlyIncome: "abc",
       currency: "USD",
       primaryFinancialGoal: "Build Emergency Fund",
+      preferredLanguage: "",
+      notificationPreference: "",
+      termsAccepted: true,
     });
 
     expect(zeroResult.monthlyIncome).toBe(
@@ -53,6 +65,9 @@ describe("validateRegistrationForm", () => {
       monthlyIncome: "7500",
       currency: "USD",
       primaryFinancialGoal: "Retirement Planning",
+      preferredLanguage: "English",
+      notificationPreference: "Email",
+      termsAccepted: true,
     });
 
     expect(result).toEqual({});
