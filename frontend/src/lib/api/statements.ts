@@ -3,6 +3,25 @@ import { z } from "zod";
 
 import { apiClient } from "@/lib/api/client";
 
+const decimalFieldSchema = z
+  .union([z.number(), z.string()])
+  .transform((value, context) => {
+    if (typeof value === "number") {
+      return value;
+    }
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid decimal value: ${value}`,
+      });
+      return z.NEVER;
+    }
+
+    return parsed;
+  });
+
 const statementStatusSchema = z.enum([
   "queued",
   "uploaded",
@@ -12,9 +31,27 @@ const statementStatusSchema = z.enum([
   "ready_for_parsing",
   "parsed",
   "analysis_pending",
+  "ready_for_analysis",
+  "parse_failed",
   "completed",
   "failed",
 ]);
+
+const transactionDataSchema = z.object({
+  transaction_uuid: z.string().uuid(),
+  statement_uuid: z.string().uuid(),
+  transaction_date: z.string(),
+  description: z.string(),
+  debit: decimalFieldSchema.nullable().optional(),
+  credit: decimalFieldSchema.nullable().optional(),
+  amount: decimalFieldSchema,
+  transaction_type: z.string(),
+  balance: decimalFieldSchema.nullable().optional(),
+  currency: z.string().nullable().optional(),
+  reference_number: z.string().nullable().optional(),
+  raw_row_json: z.record(z.string(), z.unknown()),
+  created_at: z.string(),
+});
 
 const uploadDataSchema = z.object({
   statement_uuid: z.string().uuid(),
@@ -28,6 +65,9 @@ const uploadDataSchema = z.object({
   classification_confidence: z.number().nullable().optional(),
   classification_method: z.string().nullable().optional(),
   classified_at: z.string().nullable().optional(),
+  parsed_transaction_count: z.number().int().nonnegative().default(0),
+  failed_transaction_count: z.number().int().nonnegative().default(0),
+  parsed_at: z.string().nullable().optional(),
   analysis_status: statementStatusSchema,
   status: statementStatusSchema,
   uploaded_at: z.string(),
@@ -45,6 +85,12 @@ const listEnvelopeSchema = z.object({
   data: z.array(uploadDataSchema),
 });
 
+const transactionListEnvelopeSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.array(transactionDataSchema),
+});
+
 const deleteEnvelopeSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -56,6 +102,7 @@ const deleteEnvelopeSchema = z.object({
 });
 
 export type UploadedStatement = z.infer<typeof uploadDataSchema>;
+export type TransactionRecord = z.infer<typeof transactionDataSchema>;
 
 type UploadStatementInput = {
   userUuid: string;
@@ -165,6 +212,54 @@ export async function deleteStatement(statementUuid: string): Promise<void> {
     const response = await apiClient.delete(`/statements/${statementUuid}`);
     deleteEnvelopeSchema.parse(response.data);
   } catch (error) {
+    throw toFriendlyUploadError(error);
+  }
+}
+
+export async function getStatementTransactions(
+  statementUuid: string,
+): Promise<TransactionRecord[]> {
+  const requestUrl = `/statements/${statementUuid}/transactions`;
+
+  console.info("[transactions] request:start", {
+    requestUrl,
+    statementUuid,
+  });
+
+  try {
+    const response = await apiClient.get(requestUrl);
+    console.info("[transactions] request:response", {
+      requestUrl,
+      status: response.status,
+      payload: response.data,
+    });
+
+    const parsed = transactionListEnvelopeSchema.parse(response.data);
+    console.info("[transactions] request:validated", {
+      statementUuid,
+      transactionCount: parsed.data.length,
+    });
+
+    return parsed.data;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error("[transactions] schema:validation_failed", {
+        statementUuid,
+        issues: error.issues,
+      });
+      throw new Error(
+        `Transaction response validation failed: ${error.issues[0]?.message ?? "Unknown schema mismatch"}`,
+      );
+    }
+
+    if (error instanceof Error) {
+      console.error("[transactions] request:error", {
+        statementUuid,
+        message: error.message,
+      });
+      throw error;
+    }
+
     throw toFriendlyUploadError(error);
   }
 }

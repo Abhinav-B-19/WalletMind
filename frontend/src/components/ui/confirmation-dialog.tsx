@@ -53,6 +53,7 @@ export function ConfirmationDialog({
       open={open}
       title={title}
       description={description}
+      onClose={onCancel}
       actions={
         <div className="contents" data-variant={variant}>
           <Button type="button" variant="secondary" onClick={onCancel}>

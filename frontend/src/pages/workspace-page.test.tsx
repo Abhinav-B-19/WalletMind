@@ -36,6 +36,8 @@ describe("WorkspacePage", () => {
         classification_confidence: 0.88,
         classification_method: "header-keyword",
         classified_at: "2026-07-03T09:00:01.000Z",
+        parsed_transaction_count: 0,
+        failed_transaction_count: 0,
         analysis_status: "ready_for_parsing",
         status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -73,7 +75,7 @@ describe("WorkspacePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows ready_for_parsing statements in Ready For Analysis", async () => {
+  it("shows ready_for_analysis statements in Ready For Analysis", async () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
@@ -87,8 +89,10 @@ describe("WorkspacePage", () => {
         classification_confidence: 0.88,
         classification_method: "header-keyword",
         classified_at: "2026-07-03T09:00:01.000Z",
-        analysis_status: "ready_for_parsing",
-        status: "ready_for_parsing",
+        parsed_transaction_count: 0,
+        failed_transaction_count: 0,
+        analysis_status: "ready_for_analysis",
+        status: "ready_for_analysis",
         uploaded_at: "2026-07-03T09:00:00.000Z",
       },
     ]);
@@ -101,10 +105,10 @@ describe("WorkspacePage", () => {
 
     const matchingFilenames = await screen.findAllByText("pipeline.csv");
     expect(matchingFilenames.length).toBeGreaterThan(0);
-    expect(screen.getByText("Ready For Parsing")).toBeInTheDocument();
+    expect(screen.getAllByText("Ready For Analysis").length).toBeGreaterThan(0);
   });
 
-  it("handles future processing states in Ready For Analysis", async () => {
+  it("does not include non-ready states in Ready For Analysis", async () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       {
         statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
@@ -118,6 +122,8 @@ describe("WorkspacePage", () => {
         classification_confidence: 0.7,
         classification_method: "metadata",
         classified_at: "2026-07-03T09:00:01.000Z",
+        parsed_transaction_count: 0,
+        failed_transaction_count: 0,
         analysis_status: "analysis_pending",
         status: "analysis_pending",
         uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -132,10 +138,9 @@ describe("WorkspacePage", () => {
 
     const matchingFilenames = await screen.findAllByText("future-state.csv");
     expect(matchingFilenames.length).toBeGreaterThan(0);
-    expect(screen.getByText("Analysis Pending")).toBeInTheDocument();
     expect(
-      screen.queryByText("Nothing queued for AI analysis"),
-    ).not.toBeInTheDocument();
+      screen.getByText("Nothing queued for AI analysis"),
+    ).toBeInTheDocument();
   });
 
   it("renders basic profile cards and preserves integration after refresh-like remount", async () => {
@@ -152,6 +157,8 @@ describe("WorkspacePage", () => {
         classification_confidence: 0.88,
         classification_method: "header-keyword",
         classified_at: "2026-07-03T09:00:01.000Z",
+        parsed_transaction_count: 0,
+        failed_transaction_count: 0,
         analysis_status: "ready_for_parsing",
         status: "ready_for_parsing",
         uploaded_at: "2026-07-03T09:00:00.000Z",

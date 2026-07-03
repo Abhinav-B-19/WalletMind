@@ -118,16 +118,7 @@ export function WorkspacePage() {
   const readyForAnalysisStatements = useMemo(
     () =>
       statements
-        .filter((statement) =>
-          [
-            "uploaded",
-            "classifying",
-            "classified",
-            "queued",
-            "ready_for_parsing",
-            "analysis_pending",
-          ].includes(statement.analysis_status),
-        )
+        .filter((statement) => statement.analysis_status === "ready_for_analysis")
         .sort(
           (left, right) =>
             new Date(right.uploaded_at).getTime() -

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { listStatements, uploadStatement } from "@/lib/api/statements";
+import {
+  getStatementTransactions,
+  listStatements,
+  uploadStatement,
+} from "@/lib/api/statements";
 import { apiClient } from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
@@ -34,8 +38,11 @@ describe("statements api contract", () => {
           classification_confidence: 0.88,
           classification_method: "header-keyword",
           classified_at: "2026-07-03T09:00:01.000Z",
-          analysis_status: "ready_for_parsing",
-          status: "ready_for_parsing",
+          parsed_transaction_count: 1,
+          failed_transaction_count: 0,
+          parsed_at: "2026-07-03T09:00:02.000Z",
+          analysis_status: "ready_for_analysis",
+          status: "ready_for_analysis",
           uploaded_at: "2026-07-03T09:00:00.000Z",
         },
       },
@@ -47,9 +54,10 @@ describe("statements api contract", () => {
     });
 
     expect(result.statement_uuid).toBe("8fe70b89-2325-42b6-82a6-16c6268d56eb");
-    expect(result.status).toBe("ready_for_parsing");
-    expect(result.analysis_status).toBe("ready_for_parsing");
+    expect(result.status).toBe("ready_for_analysis");
+    expect(result.analysis_status).toBe("ready_for_analysis");
     expect(result.parser_type).toBe("csv");
+    expect(result.parsed_transaction_count).toBe(1);
   });
 
   it("accepts list payload containing ready_for_parsing status", async () => {
@@ -71,8 +79,11 @@ describe("statements api contract", () => {
             classification_confidence: 0.88,
             classification_method: "header-keyword",
             classified_at: "2026-07-03T09:00:01.000Z",
-            analysis_status: "ready_for_parsing",
-            status: "ready_for_parsing",
+            parsed_transaction_count: 2,
+            failed_transaction_count: 0,
+            parsed_at: "2026-07-03T09:00:02.000Z",
+            analysis_status: "ready_for_analysis",
+            status: "ready_for_analysis",
             uploaded_at: "2026-07-03T09:00:00.000Z",
           },
         ],
@@ -82,8 +93,44 @@ describe("statements api contract", () => {
     const statements = await listStatements("f7ed2559-7ec3-4433-b9e4-af8ca6adf72b");
 
     expect(statements).toHaveLength(1);
-    expect(statements[0]?.status).toBe("ready_for_parsing");
+    expect(statements[0]?.status).toBe("ready_for_analysis");
     expect(statements[0]?.parser_type).toBe("csv");
+  });
+
+  it("parses statement transactions response", async () => {
+    const getMock = vi.mocked(apiClient.get);
+    getMock.mockResolvedValue({
+      data: {
+        success: true,
+        message: "Statement transactions retrieved successfully.",
+        data: [
+          {
+            transaction_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56ea",
+            statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+            transaction_date: "2026-07-03",
+            description: "Salary",
+            debit: null,
+            credit: "1500.00",
+            amount: "1500.00",
+            transaction_type: "credit",
+            balance: "2000.00",
+            currency: "USD",
+            reference_number: "REF-1",
+            raw_row_json: { row: 1 },
+            created_at: "2026-07-03T09:00:03.000Z",
+          },
+        ],
+      },
+    });
+
+    const records = await getStatementTransactions(
+      "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+    );
+
+    expect(records).toHaveLength(1);
+    expect(records[0]?.description).toBe("Salary");
+    expect(records[0]?.amount).toBe(1500);
+    expect(records[0]?.balance).toBe(2000);
   });
 
   it("throws friendly validation error for malformed backend upload response", async () => {

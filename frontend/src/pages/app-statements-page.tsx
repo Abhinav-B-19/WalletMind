@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -24,6 +25,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { getStoredUser } from "@/lib/auth/storage";
 import {
   deleteStatement,
+  getStatementTransactions,
+  type TransactionRecord,
   listStatements,
   type UploadedStatement,
 } from "@/lib/api/statements";
@@ -58,6 +61,10 @@ function formatFileSize(bytes: number): string {
 }
 
 function getStatusLabel(statement: UploadedStatement): string {
+  if (statement.analysis_status === "ready_for_analysis") {
+    return "Ready For Analysis";
+  }
+
   if (statement.analysis_status === "ready_for_parsing") {
     return "Ready For Parsing";
   }
@@ -80,6 +87,10 @@ function getStatusLabel(statement: UploadedStatement): string {
 
   if (statement.analysis_status === "failed") {
     return "Failed";
+  }
+
+  if (statement.analysis_status === "parse_failed") {
+    return "Parse Failed";
   }
 
   if (statement.analysis_status === "uploaded") {
@@ -152,6 +163,13 @@ export function AppStatementsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [statementPendingDelete, setStatementPendingDelete] =
     useState<UploadedStatement | null>(null);
+  const [selectedStatement, setSelectedStatement] =
+    useState<UploadedStatement | null>(null);
+  const [statementTransactions, setStatementTransactions] = useState<
+    TransactionRecord[]
+  >([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<FilterOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -242,12 +260,7 @@ export function AppStatementsPage() {
       }
 
       if (filter === "ready") {
-        return [
-          "uploaded",
-          "classifying",
-          "classified",
-          "ready_for_parsing",
-        ].includes(statement.analysis_status);
+        return statement.analysis_status === "ready_for_analysis";
       }
 
       if (filter === "processing") {
@@ -283,13 +296,7 @@ export function AppStatementsPage() {
   const summary = useMemo(() => {
     const totalStatements = statements.length;
     const readyForAnalysis = statements.filter(
-      (statement) =>
-        [
-          "uploaded",
-          "classifying",
-          "classified",
-          "ready_for_parsing",
-        ].includes(statement.analysis_status),
+      (statement) => statement.analysis_status === "ready_for_analysis",
     ).length;
     const processing = statements.filter(
       (statement) => statement.analysis_status === "processing",
@@ -323,6 +330,10 @@ export function AppStatementsPage() {
           (item) => item.statement_uuid !== statement.statement_uuid,
         ),
       );
+      if (selectedStatement?.statement_uuid === statement.statement_uuid) {
+        setSelectedStatement(null);
+        setStatementTransactions([]);
+      }
       setSuccessMessage("Statement deleted successfully.");
       setErrorMessage(null);
     } catch {
@@ -333,6 +344,46 @@ export function AppStatementsPage() {
       setIsDeleting(null);
       setStatementPendingDelete(null);
     }
+  };
+
+  const handleViewDetails = async (statement: UploadedStatement) => {
+    console.info("[transactions] ui:view_details_click", {
+      statementUuid: statement.statement_uuid,
+      filename: statement.original_filename,
+      currentParsedCount: statement.parsed_transaction_count,
+    });
+
+    setSelectedStatement(statement);
+    setDetailsError(null);
+    setIsLoadingDetails(true);
+
+    try {
+      const records = await getStatementTransactions(statement.statement_uuid);
+      console.info("[transactions] ui:view_details_success", {
+        statementUuid: statement.statement_uuid,
+        returnedCount: records.length,
+      });
+      setStatementTransactions(records);
+    } catch (error) {
+      console.error("[transactions] ui:view_details_error", {
+        statementUuid: statement.statement_uuid,
+        error,
+      });
+      setStatementTransactions([]);
+      setDetailsError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load parsed transactions for this statement.",
+      );
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedStatement(null);
+    setDetailsError(null);
+    setStatementTransactions([]);
   };
 
   return (
@@ -505,6 +556,7 @@ export function AppStatementsPage() {
                                 size="sm"
                                 variant="secondary"
                                 type="button"
+                                onClick={() => void handleViewDetails(statement)}
                               >
                                 View Details
                               </Button>
@@ -576,6 +628,7 @@ export function AppStatementsPage() {
                         variant="secondary"
                         type="button"
                         className="flex-1"
+                        onClick={() => void handleViewDetails(statement)}
                       >
                         View Details
                       </Button>
@@ -598,6 +651,98 @@ export function AppStatementsPage() {
           </div>
         </section>
       ) : null}
+
+      <Dialog
+        open={Boolean(selectedStatement)}
+        title={selectedStatement?.original_filename ?? "Statement Details"}
+        description={
+          selectedStatement
+            ? `${selectedStatement.bank_name ?? "Unknown"} • ${selectedStatement.parser_type}`
+            : undefined
+        }
+        onClose={closeDetailsModal}
+        maxWidthClassName="max-w-[1000px]"
+        contentClassName="space-y-4 p-0"
+        actions={
+          <Button type="button" variant="secondary" onClick={closeDetailsModal}>
+            Close
+          </Button>
+        }
+      >
+        {selectedStatement ? (
+          <div className="space-y-3 px-6 pb-2 text-xs text-[var(--text-muted)] sm:grid sm:grid-cols-3 sm:gap-3 sm:space-y-0">
+            <p>
+              Parsed:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.parsed_transaction_count}
+              </span>
+            </p>
+            <p>
+              Skipped:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.failed_transaction_count}
+              </span>
+            </p>
+            <p>
+              Parsed At:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.parsed_at
+                  ? new Date(selectedStatement.parsed_at).toLocaleString()
+                  : "Not available"}
+              </span>
+            </p>
+          </div>
+        ) : null}
+
+        <div className="max-h-[80vh] overflow-auto rounded-b-[var(--radius-md)] border-t border-[var(--border)] px-6 pb-6">
+          {isLoadingDetails ? (
+            <p className="py-4 text-sm text-[var(--text-muted)]">Loading transactions...</p>
+          ) : null}
+
+          {!isLoadingDetails && detailsError ? (
+            <p className="py-4 text-sm text-[var(--danger)]">{detailsError}</p>
+          ) : null}
+
+          {!isLoadingDetails && !detailsError && statementTransactions.length === 0 ? (
+            <p className="py-4 text-sm text-[var(--text-muted)]">
+              No parsed transactions available for this statement.
+            </p>
+          ) : null}
+
+          {!isLoadingDetails && !detailsError && statementTransactions.length > 0 ? (
+            <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]">
+              <table className="min-w-full divide-y divide-[var(--border)] text-xs">
+                <thead className="bg-[var(--surface-soft)] text-left text-[var(--text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">Description</th>
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">Amount</th>
+                    <th className="px-3 py-2 font-medium">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {statementTransactions.map((transaction) => (
+                    <tr key={transaction.transaction_uuid}>
+                      <td className="px-3 py-2">{new Date(transaction.transaction_date).toLocaleDateString()}</td>
+                      <td className="max-w-[22rem] truncate px-3 py-2" title={transaction.description}>
+                        {transaction.description}
+                      </td>
+                      <td className="px-3 py-2 capitalize">{transaction.transaction_type}</td>
+                      <td className="px-3 py-2">{transaction.amount.toFixed(2)}</td>
+                      <td className="px-3 py-2">
+                        {transaction.balance !== null && transaction.balance !== undefined
+                          ? transaction.balance.toFixed(2)
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+      </Dialog>
 
       <ConfirmationDialog
         open={Boolean(statementPendingDelete)}

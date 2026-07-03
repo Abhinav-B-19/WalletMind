@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { useEffect, type PropsWithChildren, type ReactNode } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -7,6 +7,9 @@ type DialogProps = PropsWithChildren<{
   title: string;
   description?: string;
   actions?: ReactNode;
+  onClose?: () => void;
+  maxWidthClassName?: string;
+  contentClassName?: string;
 }>;
 
 export function Dialog({
@@ -15,7 +18,31 @@ export function Dialog({
   description,
   actions,
   children,
+  onClose,
+  maxWidthClassName,
+  contentClassName,
 }: DialogProps) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
+
   return (
     <div
       aria-hidden={!open}
@@ -25,11 +52,16 @@ export function Dialog({
           : "pointer-events-none opacity-0"
       }`}
     >
-      <div className="absolute inset-0 bg-[rgba(6,10,20,0.7)] backdrop-blur-sm" />
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-[rgba(6,10,20,0.7)] backdrop-blur-sm"
+        onClick={() => onClose?.()}
+      />
       <Card
         role="dialog"
         aria-modal="true"
-        className={`relative z-[1] w-full max-w-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)] transition-all duration-[var(--duration-normal)] ${
+        className={`relative z-[1] w-full ${maxWidthClassName ?? "max-w-xl"} border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)] transition-all duration-[var(--duration-normal)] ${
           open ? "translate-y-0 scale-100" : "translate-y-1 scale-[0.98]"
         }`}
       >
@@ -39,7 +71,7 @@ export function Dialog({
             <p className="text-sm text-[var(--text-muted)]">{description}</p>
           ) : null}
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={contentClassName ?? "space-y-4"}>
           {children}
           {actions ? (
             <div className="flex flex-wrap justify-end gap-2">{actions}</div>

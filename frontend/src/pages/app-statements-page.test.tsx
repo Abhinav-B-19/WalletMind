@@ -31,7 +31,15 @@ function makeStatement(
   original_filename: string,
   uploaded_at: string,
   file_size = 77,
+  overrides: Partial<{
+    parser_type: string;
+    bank_name: string | null;
+  }> = {},
 ) {
+  const bankName = Object.prototype.hasOwnProperty.call(overrides, "bank_name")
+    ? overrides.bank_name
+    : "Demo Bank";
+
   return {
     statement_uuid,
     stored_file_path: `/tmp/${statement_uuid}.csv`,
@@ -39,13 +47,16 @@ function makeStatement(
     stored_filename: `${statement_uuid}.csv`,
     file_size,
     file_type: "csv",
-    parser_type: "csv",
-    bank_name: "Demo Bank",
+    parser_type: overrides.parser_type ?? "csv_parser",
+    bank_name: bankName,
     classification_confidence: 0.88,
     classification_method: "header-keyword",
     classified_at: "2026-07-03T09:00:01.000Z",
-    analysis_status: "ready_for_parsing" as const,
-    status: "ready_for_parsing" as const,
+    parsed_transaction_count: 1,
+    failed_transaction_count: 0,
+    parsed_at: "2026-07-03T09:00:02.000Z",
+    analysis_status: "ready_for_analysis" as const,
+    status: "ready_for_analysis" as const,
     uploaded_at,
   };
 }
@@ -71,6 +82,7 @@ describe("AppStatementsPage", () => {
       makeStatement("1", "alpha.csv", "2026-07-03T10:00:00.000Z"),
       makeStatement("2", "beta.csv", "2026-07-02T10:00:00.000Z"),
     ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
 
     render(<AppStatementsPage />);
 
@@ -83,6 +95,7 @@ describe("AppStatementsPage", () => {
       makeStatement("1", "salary.csv", "2026-07-03T10:00:00.000Z"),
       makeStatement("2", "groceries.csv", "2026-07-02T10:00:00.000Z"),
     ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
 
     render(<AppStatementsPage />);
 
@@ -101,6 +114,7 @@ describe("AppStatementsPage", () => {
       makeStatement("1", "zeta.csv", "2026-07-03T10:00:00.000Z"),
       makeStatement("2", "alpha.csv", "2026-07-02T10:00:00.000Z"),
     ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
 
     render(<AppStatementsPage />);
 
@@ -120,6 +134,7 @@ describe("AppStatementsPage", () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
       makeStatement("1", "delete-me.csv", "2026-07-03T10:00:00.000Z"),
     ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
     const deleteSpy = vi
       .spyOn(statementsApi, "deleteStatement")
       .mockResolvedValue(undefined);
@@ -145,9 +160,80 @@ describe("AppStatementsPage", () => {
 
   it("renders empty state when no statements", async () => {
     vi.spyOn(statementsApi, "listStatements").mockResolvedValue([]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
 
     render(<AppStatementsPage />);
 
     expect(await screen.findByText("No Statements Yet")).toBeInTheDocument();
+  });
+
+  it("loads statement transactions when View Details is clicked", async () => {
+    vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
+      makeStatement("1", "alpha.csv", "2026-07-03T10:00:00.000Z"),
+    ]);
+    const txSpy = vi
+      .spyOn(statementsApi, "getStatementTransactions")
+      .mockResolvedValue([
+        {
+          transaction_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56ea",
+          statement_uuid: "1",
+          transaction_date: "2026-07-01",
+          description: "Salary",
+          debit: null,
+          credit: 1000,
+          amount: 1000,
+          transaction_type: "credit",
+          balance: 1200,
+          currency: "USD",
+          reference_number: null,
+          raw_row_json: {},
+          created_at: "2026-07-01T10:00:00.000Z",
+        },
+      ]);
+
+    render(<AppStatementsPage />);
+
+    await screen.findAllByText("alpha.csv");
+    fireEvent.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+
+    await waitFor(() => {
+      expect(txSpy).toHaveBeenCalledWith("1");
+    });
+    expect(await screen.findByText("Salary")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(screen.getByText("Demo Bank • csv_parser")).toBeInTheDocument();
+  });
+
+  it("closes details modal with Close button", async () => {
+    vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
+      makeStatement("1", "alpha.csv", "2026-07-03T10:00:00.000Z"),
+    ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
+
+    render(<AppStatementsPage />);
+
+    await screen.findAllByText("alpha.csv");
+    fireEvent.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    expect(await screen.findByRole("button", { name: "Close" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows Unknown when bank detection fails", async () => {
+    vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
+      makeStatement("1", "mystery.csv", "2026-07-03T10:00:00.000Z", 77, {
+        bank_name: null,
+      }),
+    ]);
+    vi.spyOn(statementsApi, "getStatementTransactions").mockResolvedValue([]);
+
+    render(<AppStatementsPage />);
+
+    const unknowns = await screen.findAllByText("Unknown");
+    expect(unknowns.length).toBeGreaterThan(0);
   });
 });
