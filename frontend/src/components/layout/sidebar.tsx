@@ -14,7 +14,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { clearStoredUser, getStoredUser } from "@/lib/auth/storage";
+import { clearStoredUser } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -61,15 +61,6 @@ const links = [
 
 export function Sidebar() {
   const navigate = useNavigate();
-  const user = getStoredUser();
-  const currentDate = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
-  const displayName = user?.name ?? "User";
-  const occupation = user?.occupation ?? "Not set";
 
   const handleLogout = () => {
     clearStoredUser();

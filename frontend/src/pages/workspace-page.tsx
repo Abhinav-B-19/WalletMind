@@ -141,6 +141,24 @@ export function WorkspacePage() {
     [statements],
   );
 
+  const workspaceSnapshot = useMemo(
+    () => ({
+      totalStatements: statements.length,
+      readyForAnalysis: readyForAnalysisStatements.length,
+      parsedTransactions: statements.reduce(
+        (total, statement) => total + statement.parsed_transaction_count,
+        0,
+      ),
+      aiReadyRate:
+        statements.length === 0
+          ? 0
+          : Math.round(
+              (readyForAnalysisStatements.length / statements.length) * 100,
+            ),
+    }),
+    [readyForAnalysisStatements.length, statements],
+  );
+
   const formatStatusLabel = (status: UploadedStatement["analysis_status"]) =>
     status
       .split("_")
@@ -155,18 +173,52 @@ export function WorkspacePage() {
       />
 
       <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
+        <Card className="border-[#4f8df7]/30 bg-[linear-gradient(145deg,rgba(79,141,247,0.2),rgba(18,31,52,0.82))]">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">
               Welcome back, {user?.name ?? "User"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-[var(--text-muted)]">
-              Let&apos;s continue building your financial future.
+          <CardContent className="space-y-4">
+            <p className="max-w-3xl text-sm text-[var(--text-muted)]">
+              Run your monthly financial workflow from one place: upload data,
+              analyze trends, ask AI questions, and act on recommendations.
             </p>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild>
+                <Link to="/app/dashboard">Open AI Dashboard</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/app/planner">Open Monthly Report</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
+      </section>
+
+      <section className="space-y-4" aria-label="Financial snapshot section">
+        <SectionTitle
+          title="Financial Snapshot"
+          subtitle="Immediate view of statement readiness and analysis coverage."
+        />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Statements in Library"
+            value={`${workspaceSnapshot.totalStatements}`}
+          />
+          <StatCard
+            label="Ready For Analysis"
+            value={`${workspaceSnapshot.readyForAnalysis}`}
+          />
+          <StatCard
+            label="Parsed Transactions"
+            value={`${workspaceSnapshot.parsedTransactions}`}
+          />
+          <StatCard
+            label="AI Ready Coverage"
+            value={`${workspaceSnapshot.aiReadyRate}%`}
+          />
+        </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
