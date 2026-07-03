@@ -46,6 +46,7 @@ const SORT_OPTIONS = ["newest", "oldest", "filename", "fileSize"] as const;
 
 type FilterOption = (typeof FILTER_OPTIONS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
+type TxTypeFilter = "all" | "income" | "expense" | "internal_transfer";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -170,6 +171,11 @@ export function AppStatementsPage() {
   >([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [txSearch, setTxSearch] = useState("");
+  const [txTypeFilter, setTxTypeFilter] = useState<TxTypeFilter>("all");
+  const [txCategoryFilter, setTxCategoryFilter] = useState("all");
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<TransactionRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<FilterOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -384,7 +390,47 @@ export function AppStatementsPage() {
     setSelectedStatement(null);
     setDetailsError(null);
     setStatementTransactions([]);
+    setTxSearch("");
+    setTxTypeFilter("all");
+    setTxCategoryFilter("all");
+    setSelectedTransaction(null);
   };
+
+  const closeTransactionDetailModal = () => {
+    setSelectedTransaction(null);
+  };
+
+  const transactionCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const tx of statementTransactions) {
+      set.add(tx.category);
+    }
+    return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [statementTransactions]);
+
+  const filteredTransactions = useMemo(() => {
+    const query = txSearch.trim().toLowerCase();
+    return statementTransactions.filter((tx) => {
+      if (
+        txTypeFilter !== "all" &&
+        tx.normalized_transaction_type !== txTypeFilter
+      ) {
+        return false;
+      }
+      if (txCategoryFilter !== "all" && tx.category !== txCategoryFilter) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const merchant = tx.merchant_name?.toLowerCase() ?? "";
+      return (
+        merchant.includes(query) ||
+        tx.category.toLowerCase().includes(query) ||
+        tx.clean_description.toLowerCase().includes(query)
+      );
+    });
+  }, [statementTransactions, txSearch, txTypeFilter, txCategoryFilter]);
 
   return (
     <div className="space-y-6">
@@ -714,6 +760,12 @@ export function AppStatementsPage() {
               </span>
             </p>
             <p>
+              Direction Corrections:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.direction_corrections ?? 0}
+              </span>
+            </p>
+            <p>
               Status:{" "}
               <span className="text-[var(--text)]">
                 {getStatusLabel(selectedStatement)}
@@ -731,6 +783,41 @@ export function AppStatementsPage() {
         ) : null}
 
         <div className="max-h-[80vh] overflow-auto rounded-b-[var(--radius-md)] border-t border-[var(--border)] px-6 pb-6">
+          <div className="sticky top-0 z-10 grid gap-2 border-b border-[var(--border)] bg-[var(--surface)] py-3 sm:grid-cols-3">
+            <input
+              value={txSearch}
+              onChange={(event) => setTxSearch(event.target.value)}
+              placeholder="Search merchant/category/description"
+              aria-label="Search transactions"
+              className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text)] outline-none"
+            />
+            <select
+              value={txTypeFilter}
+              onChange={(event) =>
+                setTxTypeFilter(event.target.value as TxTypeFilter)
+              }
+              aria-label="Filter transactions by type"
+              className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text)] outline-none"
+            >
+              <option value="all">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="internal_transfer">Transfer</option>
+            </select>
+            <select
+              value={txCategoryFilter}
+              onChange={(event) => setTxCategoryFilter(event.target.value)}
+              aria-label="Filter transactions by category"
+              className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text)] outline-none"
+            >
+              {transactionCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category === "all" ? "All Categories" : category}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {isLoadingDetails ? (
             <p className="py-4 text-sm text-[var(--text-muted)]">
               Loading transactions...
@@ -743,7 +830,7 @@ export function AppStatementsPage() {
 
           {!isLoadingDetails &&
           !detailsError &&
-          statementTransactions.length === 0 ? (
+          filteredTransactions.length === 0 ? (
             <p className="py-4 text-sm text-[var(--text-muted)]">
               No parsed transactions available for this statement.
             </p>
@@ -751,34 +838,52 @@ export function AppStatementsPage() {
 
           {!isLoadingDetails &&
           !detailsError &&
-          statementTransactions.length > 0 ? (
+          filteredTransactions.length > 0 ? (
             <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]">
               <table className="min-w-full divide-y divide-[var(--border)] text-xs">
                 <thead className="bg-[var(--surface-soft)] text-left text-[var(--text-muted)]">
                   <tr>
                     <th className="px-3 py-2 font-medium">Date</th>
                     <th className="px-3 py-2 font-medium">Description</th>
+                    <th className="px-3 py-2 font-medium">Category</th>
+                    <th className="px-3 py-2 font-medium">Merchant</th>
                     <th className="px-3 py-2 font-medium">Type</th>
                     <th className="px-3 py-2 font-medium">Amount</th>
                     <th className="px-3 py-2 font-medium">Balance</th>
+                    <th className="px-3 py-2 font-medium">Info</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {statementTransactions.map((transaction) => (
-                    <tr key={transaction.transaction_uuid}>
+                  {filteredTransactions.map((transaction) => (
+                    <tr
+                      key={transaction.transaction_uuid}
+                      className="cursor-pointer transition-colors hover:bg-[var(--surface-soft)]/50"
+                      onClick={() => setSelectedTransaction(transaction)}
+                    >
                       <td className="px-3 py-2">
                         {new Date(
                           transaction.transaction_date,
                         ).toLocaleDateString()}
                       </td>
                       <td
-                        className="max-w-[22rem] truncate px-3 py-2"
-                        title={transaction.description}
+                        className="max-w-[20rem] truncate px-3 py-2"
+                        title={transaction.clean_description}
                       >
-                        {transaction.description}
+                        {transaction.clean_description}
                       </td>
-                      <td className="px-3 py-2 capitalize">
-                        {transaction.transaction_type}
+                      <td className="px-3 py-2">
+                        <Badge variant="muted">{transaction.category}</Badge>
+                      </td>
+                      <td
+                        className="max-w-[14rem] truncate px-3 py-2"
+                        title={transaction.merchant_name ?? "Unknown"}
+                      >
+                        {transaction.merchant_name ?? "Unknown"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant="muted">
+                          {transaction.normalized_transaction_type}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2">
                         {transaction.amount.toFixed(2)}
@@ -789,6 +894,20 @@ export function AppStatementsPage() {
                           ? transaction.balance.toFixed(2)
                           : "-"}
                       </td>
+                      <td className="px-3 py-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          aria-label="Open transaction details"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedTransaction(transaction);
+                          }}
+                        >
+                          i
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -796,6 +915,107 @@ export function AppStatementsPage() {
             </div>
           ) : null}
         </div>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(selectedTransaction)}
+        title="Transaction Details"
+        description={selectedTransaction?.merchant_name ?? "Unknown Merchant"}
+        onClose={closeTransactionDetailModal}
+        maxWidthClassName="max-w-[760px]"
+        contentClassName="space-y-4 p-0"
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={closeTransactionDetailModal}
+          >
+            Close
+          </Button>
+        }
+      >
+        {selectedTransaction ? (
+          <div className="space-y-3 px-6 pb-6 pt-2 text-sm text-[var(--text-muted)]">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <p>
+                Date:{" "}
+                <span className="text-[var(--text)]">
+                  {new Date(
+                    selectedTransaction.transaction_date,
+                  ).toLocaleDateString()}
+                </span>
+              </p>
+              <p>
+                Description:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.clean_description}
+                </span>
+              </p>
+              <p>
+                Merchant:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.merchant_name ?? "Unknown"}
+                </span>
+              </p>
+              <p>
+                Category:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.category}
+                </span>
+              </p>
+              <p>
+                Amount:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.amount.toFixed(2)}
+                </span>
+              </p>
+              <p>
+                Balance:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.balance !== null &&
+                  selectedTransaction.balance !== undefined
+                    ? selectedTransaction.balance.toFixed(2)
+                    : "-"}
+                </span>
+              </p>
+              <p>
+                Payment Method:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.clean_description
+                    .split(" ")[0]
+                    ?.toUpperCase() || "Unknown"}
+                </span>
+              </p>
+              <p>
+                Reference Number:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.reference_number ?? "Not available"}
+                </span>
+              </p>
+              <p>
+                Bank / Gateway:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.bank_gateway ?? "Unknown"}
+                </span>
+              </p>
+              <p>
+                Transaction Type:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.normalized_transaction_type}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Original Bank Narration
+              </p>
+              <pre className="max-h-[160px] overflow-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3 text-xs text-[var(--text)]">
+                {selectedTransaction.raw_description}
+              </pre>
+            </div>
+          </div>
+        ) : null}
       </Dialog>
 
       <ConfirmationDialog

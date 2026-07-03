@@ -19,6 +19,7 @@ from zipfile import ZipFile
 from walletmind.schemas.transaction import ParserResultDTO, TransactionCreateDTO
 
 logger = logging.getLogger(__name__)
+parser_logger = logging.getLogger("walletmind.parsers")
 
 
 def normalize_date(value: Any) -> date | None:
@@ -237,6 +238,13 @@ class GenericCSVParser(BaseStatementParser):
         reference_number: int | None = None
         transaction_type: int | None = None
 
+    @dataclass
+    class DirectionValidationResult:
+        transaction: TransactionCreateDTO
+        corrected: bool
+        original_direction: str
+        corrected_direction: str
+
     class StatementColumnMapper:
         _ALIASES: dict[str, tuple[str, ...]] = {
             "date": ("date", "txn date", "transaction date", "posting date", "value date", "tran date"),
@@ -314,6 +322,82 @@ class GenericCSVParser(BaseStatementParser):
                     best_mapping = mapping
 
             return best_idx, best_mapping
+
+    class TransactionDirectionValidator:
+        """Deterministically validates debit/credit direction using running balance."""
+
+        _TOLERANCE = Decimal("0.01")
+
+        @classmethod
+        def validate(
+            cls,
+            *,
+            transaction: TransactionCreateDTO,
+            previous_balance: Decimal | None,
+        ) -> GenericCSVParser.DirectionValidationResult:
+            if previous_balance is None or transaction.balance is None:
+                return GenericCSVParser.DirectionValidationResult(
+                    transaction=transaction,
+                    corrected=False,
+                    original_direction=transaction.transaction_type,
+                    corrected_direction=transaction.transaction_type,
+                )
+
+            amount = abs(transaction.amount)
+            current_balance = transaction.balance
+
+            debit_match = abs((previous_balance - amount) - current_balance) <= cls._TOLERANCE
+            credit_match = abs((previous_balance + amount) - current_balance) <= cls._TOLERANCE
+
+            original_direction = transaction.transaction_type
+            expected_direction = (
+                "debit"
+                if transaction.transaction_type == "debit"
+                else "credit"
+            )
+
+            if (expected_direction == "debit" and debit_match) or (
+                expected_direction == "credit" and credit_match
+            ):
+                return GenericCSVParser.DirectionValidationResult(
+                    transaction=transaction,
+                    corrected=False,
+                    original_direction=original_direction,
+                    corrected_direction=original_direction,
+                )
+
+            corrected_direction: str | None = None
+            if expected_direction == "debit" and credit_match:
+                corrected_direction = "credit"
+            elif expected_direction == "credit" and debit_match:
+                corrected_direction = "debit"
+
+            if corrected_direction is None:
+                return GenericCSVParser.DirectionValidationResult(
+                    transaction=transaction,
+                    corrected=False,
+                    original_direction=original_direction,
+                    corrected_direction=original_direction,
+                )
+
+            corrected_tx = transaction.model_copy(deep=True)
+            if corrected_direction == "credit":
+                corrected_tx.transaction_type = "credit"
+                corrected_tx.amount = abs(corrected_tx.amount)
+                corrected_tx.credit = abs(corrected_tx.amount)
+                corrected_tx.debit = None
+            else:
+                corrected_tx.transaction_type = "debit"
+                corrected_tx.amount = -abs(corrected_tx.amount)
+                corrected_tx.debit = corrected_tx.amount
+                corrected_tx.credit = None
+
+            return GenericCSVParser.DirectionValidationResult(
+                transaction=corrected_tx,
+                corrected=True,
+                original_direction=original_direction,
+                corrected_direction=corrected_direction,
+            )
 
     def _extract_metadata(self, lines: list[str]) -> dict[str, str]:
         metadata: dict[str, str] = {}
@@ -517,7 +601,10 @@ class GenericCSVParser(BaseStatementParser):
         rows_read = 0
         rows_scanned = 0
         rows_skipped = 0
+        direction_corrections = 0
         errors: list[str] = []
+        previous_balance: Decimal | None = None
+        direction_validator = self.TransactionDirectionValidator()
 
         for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
             rows_read += 1
@@ -541,6 +628,26 @@ class GenericCSVParser(BaseStatementParser):
                 if normalized is None:
                     rows_skipped += 1
                     continue
+
+                direction_result = direction_validator.validate(
+                    transaction=normalized,
+                    previous_balance=previous_balance,
+                )
+                normalized = direction_result.transaction
+
+                if direction_result.corrected:
+                    direction_corrections += 1
+                    parser_logger.info(
+                        "Corrected Debit/Credit direction using balance validation.",
+                        extra={
+                            "statement_id": metadata.get("account_number") or filename,
+                            "row_number": row_number,
+                            "original_direction": direction_result.original_direction,
+                            "corrected_direction": direction_result.corrected_direction,
+                        },
+                    )
+
+                previous_balance = normalized.balance if normalized.balance is not None else previous_balance
                 transactions.append(normalized)
             except Exception as exc:  # noqa: BLE001
                 rows_skipped += 1
@@ -562,6 +669,7 @@ class GenericCSVParser(BaseStatementParser):
             rows_parsed=len(transactions),
             rows_scanned=rows_scanned,
             rows_skipped=rows_skipped,
+            direction_corrections=direction_corrections,
             transactions=transactions,
             errors=errors,
             metadata=metadata,

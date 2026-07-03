@@ -83,6 +83,7 @@ class Statement(Base):
     rows_read: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     rows_parsed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     rows_skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    direction_corrections: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     parsing_duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[StatementStatus] = mapped_column(
         SAEnum(StatementStatus, native_enum=False),

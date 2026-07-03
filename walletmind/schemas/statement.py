@@ -91,6 +91,7 @@ class UploadResponseDTO(BaseModel):
     rows_read: int = 0
     rows_parsed: int = 0
     rows_skipped: int = 0
+    direction_corrections: int = 0
     parsing_duration_ms: int = 0
     analysis_status: StatementStatus
     status: StatementStatus

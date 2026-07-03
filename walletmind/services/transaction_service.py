@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 import json
+from sqlalchemy import or_
 from uuid import UUID
 
 from sqlalchemy import and_, select
@@ -15,6 +16,7 @@ from backend.app.models.statement import Statement
 from backend.app.models.transaction import Transaction
 from walletmind.exceptions import StatementNotFoundError, StatementStorageError
 from walletmind.schemas.transaction import TransactionCreateDTO, TransactionDTO
+from walletmind.services.transaction_normalizer import TransactionNormalizer
 
 
 class TransactionService:
@@ -22,6 +24,7 @@ class TransactionService:
 
     def __init__(self, *, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
+        self._normalizer = TransactionNormalizer()
 
     def store_transactions(
         self,
@@ -40,6 +43,11 @@ class TransactionService:
             duplicates = 0
             seen_signatures: set[tuple[date, str, Decimal]] = set()
             for tx in transactions:
+                enriched = self._normalizer.enrich(
+                    transaction=tx,
+                    account_holder_name=statement.user.full_name if statement.user else None,
+                )
+
                 signature = (tx.transaction_date, tx.description, tx.amount)
                 if signature in seen_signatures:
                     duplicates += 1
@@ -68,6 +76,15 @@ class TransactionService:
                     balance=tx.balance,
                     currency=tx.currency,
                     reference_number=tx.reference_number,
+                    merchant_name=enriched.merchant_name,
+                    bank_gateway=enriched.bank_gateway,
+                    category=enriched.category,
+                    raw_description=enriched.raw_description,
+                    clean_description=enriched.clean_description,
+                    normalized_transaction_type=enriched.normalized_transaction_type,
+                    is_internal_transfer=enriched.is_internal_transfer,
+                    is_income=enriched.is_income,
+                    is_expense=enriched.is_expense,
                     raw_row_json=json.dumps(tx.raw_row_json, ensure_ascii=True, sort_keys=True),
                 )
                 session.add(record)
@@ -105,6 +122,9 @@ class TransactionService:
         to_date: date | None = None,
         min_amount: Decimal | None = None,
         max_amount: Decimal | None = None,
+        q: str | None = None,
+        normalized_type: str | None = None,
+        category: str | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> list[TransactionDTO]:
@@ -129,6 +149,20 @@ class TransactionService:
                 filters.append(Transaction.amount >= min_amount)
             if max_amount is not None:
                 filters.append(Transaction.amount <= max_amount)
+            if normalized_type is not None:
+                filters.append(Transaction.normalized_transaction_type == normalized_type)
+            if category is not None:
+                filters.append(Transaction.category == category)
+
+            if q:
+                pattern = f"%{q.strip()}%"
+                filters.append(
+                    or_(
+                        Transaction.merchant_name.ilike(pattern),
+                        Transaction.category.ilike(pattern),
+                        Transaction.clean_description.ilike(pattern),
+                    )
+                )
 
             if filters:
                 query = query.where(and_(*filters))
@@ -156,6 +190,17 @@ class TransactionService:
             balance=record.balance,
             currency=record.currency,
             reference_number=record.reference_number,
+            merchant_name=record.merchant_name,
+            bank_gateway=record.bank_gateway,
+            category=record.category,
+            raw_description=record.raw_description,
+            clean_description=record.clean_description,
+            normalized_transaction_type=record.normalized_transaction_type,
+            flags={
+                "is_internal_transfer": bool(record.is_internal_transfer),
+                "is_income": bool(record.is_income),
+                "is_expense": bool(record.is_expense),
+            },
             raw_row_json=json.loads(record.raw_row_json),
             created_at=record.created_at,
         )

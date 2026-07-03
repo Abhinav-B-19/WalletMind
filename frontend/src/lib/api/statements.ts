@@ -49,6 +49,19 @@ const transactionDataSchema = z.object({
   balance: decimalFieldSchema.nullable().optional(),
   currency: z.string().nullable().optional(),
   reference_number: z.string().nullable().optional(),
+  merchant_name: z.string().nullable().optional(),
+  bank_gateway: z.string().nullable().optional(),
+  category: z.string(),
+  raw_description: z.string(),
+  clean_description: z.string(),
+  normalized_transaction_type: z.string(),
+  flags: z
+    .object({
+      is_internal_transfer: z.boolean(),
+      is_income: z.boolean(),
+      is_expense: z.boolean(),
+    })
+    .optional(),
   raw_row_json: z.record(z.string(), z.unknown()),
   created_at: z.string(),
 });
@@ -71,6 +84,7 @@ const uploadDataSchema = z.object({
   rows_read: z.number().int().nonnegative().optional(),
   rows_parsed: z.number().int().nonnegative().optional(),
   rows_skipped: z.number().int().nonnegative().optional(),
+  direction_corrections: z.number().int().nonnegative().optional(),
   parsing_duration_ms: z.number().int().nonnegative().optional(),
   analysis_status: statementStatusSchema,
   status: statementStatusSchema,

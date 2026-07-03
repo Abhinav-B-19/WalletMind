@@ -216,6 +216,7 @@ class StatementUploadService:
             rows_read=statement.rows_read,
             rows_parsed=statement.rows_parsed,
             rows_skipped=statement.rows_skipped,
+            direction_corrections=statement.direction_corrections,
             parsing_duration_ms=statement.parsing_duration_ms,
             analysis_status=statement.status,
             status=statement.status,

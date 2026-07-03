@@ -75,3 +75,86 @@ def test_duplicate_prevention() -> None:
     assert duplicates_1 == 0
     assert inserted_2 == 0
     assert duplicates_2 == 1
+
+
+def test_store_transactions_persists_enriched_fields() -> None:
+    service, _, statement_uuid = _setup()
+
+    tx = TransactionCreateDTO(
+        transaction_date=date(2026, 1, 2),
+        description="UPI/P2M/GROWW SIP",
+        debit=Decimal("-500.00"),
+        credit=None,
+        amount=Decimal("-500.00"),
+        transaction_type="debit",
+        balance=Decimal("500.00"),
+        currency="INR",
+        reference_number="-",
+        raw_row_json={"r": 2},
+    )
+
+    inserted, duplicates = service.store_transactions(
+        statement_uuid=statement_uuid,
+        transactions=[tx],
+    )
+
+    assert inserted == 1
+    assert duplicates == 0
+
+    rows = service.get_statement_transactions(statement_uuid=statement_uuid)
+    assert rows
+    assert rows[0].category == "Investments"
+    assert rows[0].clean_description == "Groww Sip"
+    assert rows[0].bank_gateway is None
+    assert rows[0].normalized_transaction_type == "expense"
+
+
+def test_list_transactions_supports_search_and_filters() -> None:
+    service, _, statement_uuid = _setup()
+
+    transactions = [
+        TransactionCreateDTO(
+            transaction_date=date(2026, 1, 3),
+            description="UPI/P2M/BP Petrol Pump",
+            debit=Decimal("-1000.00"),
+            credit=None,
+            amount=Decimal("-1000.00"),
+            transaction_type="debit",
+            balance=Decimal("1000.00"),
+            currency="INR",
+            reference_number="-",
+            raw_row_json={"r": 3},
+        ),
+        TransactionCreateDTO(
+            transaction_date=date(2026, 1, 4),
+            description="UPI/P2M/JioHotstar",
+            debit=Decimal("-299.00"),
+            credit=None,
+            amount=Decimal("-299.00"),
+            transaction_type="debit",
+            balance=Decimal("701.00"),
+            currency="INR",
+            reference_number="-",
+            raw_row_json={"r": 4},
+        ),
+    ]
+    service.store_transactions(statement_uuid=statement_uuid, transactions=transactions)
+
+    fuel_only = service.list_transactions(
+        statement_uuid=statement_uuid,
+        category="Fuel",
+        page=1,
+        page_size=20,
+    )
+    assert len(fuel_only) == 1
+    assert fuel_only[0].category == "Fuel"
+
+    entertainment_only = service.list_transactions(
+        statement_uuid=statement_uuid,
+        normalized_type="expense",
+        q="hotstar",
+        page=1,
+        page_size=20,
+    )
+    assert len(entertainment_only) == 1
+    assert entertainment_only[0].category == "Entertainment"

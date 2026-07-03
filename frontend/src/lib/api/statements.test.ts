@@ -41,6 +41,7 @@ describe("statements api contract", () => {
           parsed_transaction_count: 1,
           failed_transaction_count: 0,
           parsed_at: "2026-07-03T09:00:02.000Z",
+          direction_corrections: 2,
           analysis_status: "ready_for_analysis",
           status: "ready_for_analysis",
           uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -82,6 +83,7 @@ describe("statements api contract", () => {
             parsed_transaction_count: 2,
             failed_transaction_count: 0,
             parsed_at: "2026-07-03T09:00:02.000Z",
+            direction_corrections: 1,
             analysis_status: "ready_for_analysis",
             status: "ready_for_analysis",
             uploaded_at: "2026-07-03T09:00:00.000Z",
@@ -118,6 +120,17 @@ describe("statements api contract", () => {
             balance: "2000.00",
             currency: "USD",
             reference_number: "REF-1",
+            merchant_name: "Employer Payroll",
+            bank_gateway: null,
+            category: "Income",
+            raw_description: "Salary",
+            clean_description: "salary",
+            normalized_transaction_type: "income",
+            flags: {
+              is_internal_transfer: false,
+              is_income: true,
+              is_expense: false,
+            },
             raw_row_json: { row: 1 },
             created_at: "2026-07-03T09:00:03.000Z",
           },
@@ -131,6 +144,11 @@ describe("statements api contract", () => {
 
     expect(records).toHaveLength(1);
     expect(records[0]?.description).toBe("Salary");
+    expect(records[0]?.merchant_name).toBe("Employer Payroll");
+    expect(records[0]?.bank_gateway).toBeNull();
+    expect(records[0]?.category).toBe("Income");
+    expect(records[0]?.clean_description).toBe("salary");
+    expect(records[0]?.normalized_transaction_type).toBe("income");
     expect(records[0]?.amount).toBe(1500);
     expect(records[0]?.balance).toBe(2000);
   });

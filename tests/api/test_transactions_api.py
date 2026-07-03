@@ -83,6 +83,15 @@ def _create_seed_data(session_factory) -> tuple[str, str]:
                     balance=Decimal("3000.00"),
                     currency="USD",
                     reference_number="A1",
+                    merchant_name="Employer Payroll",
+                    bank_gateway=None,
+                    category="Income",
+                    raw_description="Salary",
+                    clean_description="salary",
+                    normalized_transaction_type="income",
+                    is_internal_transfer=False,
+                    is_income=True,
+                    is_expense=False,
                     raw_row_json=json.dumps({"row": 1}),
                 ),
                 Transaction(
@@ -96,6 +105,15 @@ def _create_seed_data(session_factory) -> tuple[str, str]:
                     balance=Decimal("2880.00"),
                     currency="USD",
                     reference_number="A2",
+                    merchant_name="Local Store",
+                    bank_gateway=None,
+                    category="Food & Dining",
+                    raw_description="Groceries",
+                    clean_description="groceries",
+                    normalized_transaction_type="expense",
+                    is_internal_transfer=False,
+                    is_income=False,
+                    is_expense=True,
                     raw_row_json=json.dumps({"row": 2}),
                 ),
             ]
@@ -116,6 +134,11 @@ def test_get_statement_transactions(tmp_path) -> None:
     assert payload["success"] is True
     assert len(payload["data"]) == 2
     assert payload["data"][0]["statement_uuid"] == statement_uuid
+    assert payload["data"][0]["category"]
+    assert "clean_description" in payload["data"][0]
+    assert "bank_gateway" in payload["data"][0]
+    assert "normalized_transaction_type" in payload["data"][0]
+    assert "flags" in payload["data"][0]
 
 
 def test_list_transactions_with_filters(tmp_path) -> None:
@@ -140,3 +163,26 @@ def test_list_transactions_with_filters(tmp_path) -> None:
     assert payload["success"] is True
     assert len(payload["data"]) == 1
     assert payload["data"][0]["description"] == "Groceries"
+
+
+def test_list_transactions_with_search_and_category_filter(tmp_path) -> None:
+    client, session_factory = _setup_client(tmp_path)
+    statement_uuid, _ = _create_seed_data(session_factory)
+
+    response = client.get(
+        "/api/v1/transactions",
+        params={
+            "statement_uuid": statement_uuid,
+            "q": "payroll",
+            "category": "Income",
+            "normalized_type": "income",
+            "page": 1,
+            "page_size": 10,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert len(payload["data"]) == 1
+    assert payload["data"][0]["category"] == "Income"

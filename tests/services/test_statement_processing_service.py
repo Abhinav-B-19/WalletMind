@@ -116,6 +116,7 @@ def test_processing_service_status_transitions_and_timestamps(tmp_path) -> None:
     assert persisted.processing_completed_at is not None
     assert persisted.parsed_at is not None
     assert persisted.parsed_transaction_count >= 1
+    assert persisted.direction_corrections >= 0
     assert persisted.processing_error is None
 
 

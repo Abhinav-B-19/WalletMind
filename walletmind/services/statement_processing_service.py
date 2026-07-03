@@ -129,6 +129,7 @@ class StatementProcessingService:
                 statement.rows_read = parser_result.rows_read
                 statement.rows_parsed = parser_result.rows_parsed
                 statement.rows_skipped = parser_result.rows_skipped
+                statement.direction_corrections = parser_result.direction_corrections
                 statement.parsing_duration_ms = parser_metrics.duration_ms
                 statement.parsed_at = datetime.now(tz=timezone.utc)
                 statement.processing_completed_at = datetime.now(tz=timezone.utc)
@@ -162,6 +163,7 @@ class StatementProcessingService:
                         "parser_selected": parser_result.parser_name,
                         "rows_scanned": parser_result.rows_scanned,
                         "rows_skipped": parser_result.rows_skipped,
+                        "direction_corrections": parser_result.direction_corrections,
                         "transactions_extracted": inserted_count,
                         "duplicates_skipped": duplicate_count,
                         "parser_duration_ms": parser_metrics.duration_ms,

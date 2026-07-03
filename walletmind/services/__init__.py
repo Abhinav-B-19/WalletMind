@@ -15,6 +15,7 @@ from walletmind.services.statement_classifier import (
 )
 from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
+from walletmind.services.transaction_normalizer import TransactionNormalizer
 from walletmind.services.user_service import InMemoryUserStore, UserService
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
 	"StatementClassifier",
 	"StatementProcessingService",
 	"StatementUploadService",
+	"TransactionNormalizer",
 	"UserService",
 ]

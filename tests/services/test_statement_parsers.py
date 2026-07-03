@@ -83,3 +83,109 @@ def test_csv_parse_returns_header_not_found_for_invalid_file() -> None:
 
     assert result.transactions == []
     assert "header_not_found" in result.errors
+
+
+def test_direction_validator_correct_debit_remains_debit() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Expense,100,,900
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 1
+    assert result.transactions[0].transaction_type == "debit"
+    assert result.direction_corrections == 0
+
+
+def test_direction_validator_correct_credit_remains_credit() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Deposit,,100,1100
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 1
+    assert result.transactions[0].transaction_type == "credit"
+    assert result.direction_corrections == 0
+
+
+def test_direction_validator_swapped_headers_get_corrected() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Opening,,1000,1000
+2026-01-02,Deposit,100,,1100
+2026-01-03,Expense,,50,1050
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 3
+    assert result.transactions[1].transaction_type == "credit"
+    assert result.transactions[1].amount == Decimal("100.00")
+    assert result.transactions[2].transaction_type == "debit"
+    assert result.transactions[2].amount == Decimal("-50.00")
+    assert result.direction_corrections == 2
+
+
+def test_direction_validator_no_correction_when_balance_missing() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Expense,100,,
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 1
+    assert result.direction_corrections == 0
+
+
+def test_direction_validator_no_correction_when_previous_balance_missing() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Deposit,100,,1100
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 1
+    assert result.direction_corrections == 0
+
+
+def test_direction_validator_floating_point_tolerance() -> None:
+    parser = GenericCSVParser()
+    csv_data = """Date,Description,DR,CR,Balance
+2026-01-01,Opening,,1000,1000.00
+2026-01-02,Deposit,0.10,,1000.10
+"""
+
+    result = parser.parse(
+        content=csv_data.encode("utf-8"),
+        filename="sample.csv",
+        content_type="text/csv",
+    )
+
+    assert len(result.transactions) == 2
+    assert result.transactions[1].transaction_type == "credit"
+    assert result.direction_corrections == 1

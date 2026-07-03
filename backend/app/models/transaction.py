@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.base import Base
@@ -53,6 +53,15 @@ class Transaction(Base):
     balance: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     reference_number: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    merchant_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    bank_gateway: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, default="Others")
+    raw_description: Mapped[str] = mapped_column(String(255), nullable=False)
+    clean_description: Mapped[str] = mapped_column(String(255), nullable=False)
+    normalized_transaction_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
+    is_internal_transfer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_income: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_expense: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw_row_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
