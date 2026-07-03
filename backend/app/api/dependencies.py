@@ -8,6 +8,9 @@ from backend.app.services.ai.ai_service import AIService
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsService,
 )
+from backend.app.services.assistant.financial_assistant_service import (
+    FinancialAssistantService,
+)
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.transaction_service import TransactionService
@@ -48,3 +51,9 @@ def get_spending_insights_service(request: Request) -> SpendingInsightsService:
     """Return the app-scoped spending insights service instance."""
 
     return request.app.state.spending_insights_service
+
+
+def get_financial_assistant_service(request: Request) -> FinancialAssistantService:
+    """Return the app-scoped financial assistant service instance."""
+
+    return request.app.state.financial_assistant_service

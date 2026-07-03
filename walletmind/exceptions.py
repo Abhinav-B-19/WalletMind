@@ -43,3 +43,15 @@ class NoTransactionsForStatementError(StatementUploadError):
 
 class StatementInsightsError(WalletMindError):
     """Raised when AI insights generation fails."""
+
+
+class AssistantError(WalletMindError):
+    """Base exception for conversational assistant workflows."""
+
+
+class AssistantNoDataError(AssistantError):
+    """Raised when assistant retrieval yields no relevant financial data."""
+
+
+class AssistantValidationError(AssistantError):
+    """Raised when assistant output fails grounding validation."""

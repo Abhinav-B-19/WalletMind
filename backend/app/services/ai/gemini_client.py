@@ -67,7 +67,10 @@ class GeminiClient:
         except Exception as exc:  # pragma: no cover - defensive provider mapping
             if "rate" in str(exc).lower() and "limit" in str(exc).lower():
                 raise AIRateLimitError("Gemini rate limit exceeded.") from exc
-            raise AIServiceError("Gemini API request failed.") from exc
+            self._logger.exception("Gemini request failed")
+            raise AIServiceError(
+                f"Gemini request failed: {type(exc).__name__}: {exc}"
+            ) from exc
 
         return self._parse_response(raw_response)
 

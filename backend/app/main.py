@@ -32,6 +32,11 @@ from backend.app.services.ai.ai_service import AIService
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsService,
 )
+from backend.app.services.assistant.context_builder import ContextBuilder
+from backend.app.services.assistant.financial_assistant_service import (
+    FinancialAssistantService,
+)
+from backend.app.services.assistant.retrieval_service import RetrievalService
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
@@ -76,6 +81,13 @@ def create_app() -> FastAPI:
     app.state.ai_service = AIService()
     app.state.spending_insights_service = SpendingInsightsService(
         transaction_service=app.state.transaction_service,
+        ai_service=app.state.ai_service,
+    )
+    app.state.financial_assistant_service = FinancialAssistantService(
+        retrieval_service=RetrievalService(
+            transaction_service=app.state.transaction_service,
+        ),
+        context_builder=ContextBuilder(),
         ai_service=app.state.ai_service,
     )
     app.state.processing_dispatcher = ProcessingDispatcher(

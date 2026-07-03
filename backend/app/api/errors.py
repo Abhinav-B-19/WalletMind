@@ -14,6 +14,8 @@ from backend.app.services.ai.exceptions import (
     AIServiceError,
 )
 from walletmind.exceptions import (
+    AssistantNoDataError,
+    AssistantValidationError,
     DuplicateUserError,
     EmptyFileError,
     FileTooLargeError,
@@ -218,6 +220,34 @@ def register_error_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "code": "STATEMENT_INSIGHTS_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AssistantNoDataError)
+    async def assistant_no_data_handler(
+        request: Request, exc: AssistantNoDataError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "code": "ASSISTANT_NO_DATA",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AssistantValidationError)
+    async def assistant_validation_handler(
+        request: Request, exc: AssistantValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "success": False,
+                "code": "ASSISTANT_VALIDATION_ERROR",
                 "message": str(exc),
                 "details": None,
             },
