@@ -4,7 +4,9 @@ import {
   RadialBarChart,
   ResponsiveContainer,
 } from "recharts";
+import { useEffect, useRef, useState } from "react";
 
+import { healthBandForScore } from "@/features/ai-dashboard/components/financial-health/health-visuals";
 import type { HealthTone } from "@/features/ai-dashboard/types";
 
 const toneMap: Record<
@@ -17,14 +19,19 @@ const toneMap: Record<
     label: "Excellent",
   },
   good: {
-    stroke: "#e3be37",
-    soft: "rgba(227, 190, 55, 0.16)",
+    stroke: "#4f8df7",
+    soft: "rgba(79, 141, 247, 0.16)",
     label: "Good",
   },
-  warning: {
+  fair: {
+    stroke: "#e3be37",
+    soft: "rgba(227, 190, 55, 0.16)",
+    label: "Fair",
+  },
+  "needs-improvement": {
     stroke: "#f3972e",
     soft: "rgba(243, 151, 46, 0.16)",
-    label: "Needs Attention",
+    label: "Needs Improvement",
   },
   critical: {
     stroke: "#ff6a82",
@@ -34,16 +41,7 @@ const toneMap: Record<
 };
 
 export function healthToneForScore(score: number): HealthTone {
-  if (score >= 80) {
-    return "excellent";
-  }
-  if (score >= 65) {
-    return "good";
-  }
-  if (score >= 45) {
-    return "warning";
-  }
-  return "critical";
+  return healthBandForScore(score);
 }
 
 type HealthScoreGaugeProps = {
@@ -53,8 +51,33 @@ type HealthScoreGaugeProps = {
 
 export function HealthScoreGauge({ score, grade }: HealthScoreGaugeProps) {
   const clamped = Math.max(0, Math.min(100, score));
+  const [displayScore, setDisplayScore] = useState(0);
+  const frame = useRef<number | null>(null);
   const tone = healthToneForScore(clamped);
   const palette = toneMap[tone];
+
+  useEffect(() => {
+    const durationMs = 700;
+    const startedAt = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - startedAt;
+      const progress = Math.min(elapsed / durationMs, 1);
+      setDisplayScore(Math.round(clamped * progress));
+
+      if (progress < 1) {
+        frame.current = requestAnimationFrame(tick);
+      }
+    };
+
+    frame.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (frame.current !== null) {
+        cancelAnimationFrame(frame.current);
+      }
+    };
+  }, [clamped]);
 
   return (
     <div
@@ -90,7 +113,7 @@ export function HealthScoreGauge({ score, grade }: HealthScoreGaugeProps) {
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
         <div>
           <p className="text-4xl font-bold" style={{ color: palette.stroke }}>
-            {clamped}
+            {displayScore}
           </p>
           <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
             Grade {grade}

@@ -264,19 +264,28 @@ export function AIDashboardPage() {
         />
       ) : null}
       {healthScoreQuery.data ? (
-        <AIHeroCard
-          data={healthScoreQuery.data}
-          onAction={() => {
-            const question = assistantQuestion.trim();
-            const base = selectedStatementUuid
-              ? `/app/chat?statement_id=${selectedStatementUuid}`
-              : "/app/chat";
-            const href = question
-              ? `${base}&q=${encodeURIComponent(question)}`
-              : base;
-            navigate(href);
-          }}
-        />
+        <div className="space-y-3">
+          <AIHeroCard
+            data={healthScoreQuery.data}
+            onAction={() => {
+              const question = assistantQuestion.trim();
+              const base = selectedStatementUuid
+                ? `/app/chat?statement_id=${selectedStatementUuid}`
+                : "/app/chat";
+              const href = question
+                ? `${base}&q=${encodeURIComponent(question)}`
+                : base;
+              navigate(href);
+            }}
+          />
+          {selectedStatementUuid ? (
+            <Button asChild variant="secondary" className="w-full sm:w-auto">
+              <Link to={`/app/health?statement_id=${selectedStatementUuid}`}>
+                Open Full Financial Health Experience
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       ) : null}
 
       <section

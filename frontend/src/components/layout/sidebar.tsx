@@ -1,8 +1,8 @@
 import {
   Bot,
   CircleDollarSign,
-  CircleUserRound,
   FileStack,
+  HeartPulse,
   Home,
   LogOut,
   Settings,
@@ -27,6 +27,12 @@ const links = [
     to: "/app/dashboard",
     label: "AI Dashboard",
     icon: CircleDollarSign,
+    comingSoon: false,
+  },
+  {
+    to: "/app/health",
+    label: "Financial Health",
+    icon: HeartPulse,
     comingSoon: false,
   },
   { to: "/app/planner", label: "Planner", icon: Timer, comingSoon: true },

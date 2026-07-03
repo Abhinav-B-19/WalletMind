@@ -99,4 +99,9 @@ export type AIServiceHealth = {
   status: string;
 };
 
-export type HealthTone = "excellent" | "good" | "warning" | "critical";
+export type HealthTone =
+  | "excellent"
+  | "good"
+  | "fair"
+  | "needs-improvement"
+  | "critical";
