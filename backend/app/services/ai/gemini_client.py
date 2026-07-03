@@ -51,16 +51,15 @@ class GeminiClient:
         sdk = self._get_sdk_module()
         model_client = self._get_model_client(sdk)
 
-        generation_config = {
-            "temperature": request.temperature,
-            "max_output_tokens": request.max_output_tokens,
-        }
+        generation_config = self._build_generation_config(request=request)
         prompt = self._compose_prompt(request=request)
 
         try:
-            raw_response = model_client.generate_content(
-                prompt,
+            raw_response = self._generate_content(
+                model_client=model_client,
+                prompt=prompt,
                 generation_config=generation_config,
+                request=request,
             )
         except TimeoutError as exc:
             raise AIServiceError("Gemini request timed out.") from exc
@@ -93,13 +92,13 @@ class GeminiClient:
         user_prompt: str,
         temperature: float | None = None,
         max_output_tokens: int | None = None,
+        response_mime_type: str | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> AIRequest:
         """Build a validated AI request using defaults when values are omitted."""
 
         request_temperature = (
-            temperature
-            if temperature is not None
-            else self._resolve_temperature()
+            temperature if temperature is not None else self._resolve_temperature()
         )
         request_max_tokens = (
             max_output_tokens
@@ -113,9 +112,65 @@ class GeminiClient:
                 user_prompt=user_prompt,
                 temperature=request_temperature,
                 max_output_tokens=request_max_tokens,
+                response_mime_type=response_mime_type,
+                response_schema=response_schema,
             )
         except ValidationError as exc:
             raise AIConfigurationError("Invalid AI request values.") from exc
+
+    def _build_generation_config(self, *, request: AIRequest) -> dict[str, Any]:
+        config: dict[str, Any] = {
+            "temperature": request.temperature,
+            "max_output_tokens": request.max_output_tokens,
+        }
+        if request.response_mime_type is not None:
+            config["response_mime_type"] = request.response_mime_type
+        if request.response_schema is not None:
+            config["response_schema"] = request.response_schema
+        return config
+
+    def _generate_content(
+        self,
+        *,
+        model_client: Any,
+        prompt: str,
+        generation_config: dict[str, Any],
+        request: AIRequest,
+    ) -> Any:
+        try:
+            return model_client.generate_content(
+                prompt,
+                generation_config=generation_config,
+            )
+        except Exception as exc:
+            if self._is_json_mode_unsupported_error(exc=exc, request=request):
+                self._logger.warning(
+                    "Gemini SDK does not support response_mime_type/response_schema; "
+                    "falling back to prompt-only JSON enforcement."
+                )
+                fallback_config = {
+                    "temperature": request.temperature,
+                    "max_output_tokens": request.max_output_tokens,
+                }
+                return model_client.generate_content(
+                    prompt,
+                    generation_config=fallback_config,
+                )
+            raise
+
+    @staticmethod
+    def _is_json_mode_unsupported_error(*, exc: Exception, request: AIRequest) -> bool:
+        if request.response_mime_type is None and request.response_schema is None:
+            return False
+
+        message = str(exc).lower()
+        return (
+            "response_mime_type" in message
+            or "response_schema" in message
+            or "unknown field" in message
+            or "unexpected keyword" in message
+            or "invalid generation config" in message
+        )
 
     def _get_sdk_module(self) -> Any:
         if self._sdk_module is None:

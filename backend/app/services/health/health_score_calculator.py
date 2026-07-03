@@ -67,6 +67,14 @@ class HealthScoreCalculator:
             statement_uuid=statement_uuid,
             transactions=transactions,
         )
+        return self.calculate_from_summary(summary=summary)
+
+    def calculate_from_summary(
+        self,
+        *,
+        summary: SpendingSummary,
+    ) -> HealthScoreComputation:
+        """Compute weighted score and diagnostics from prebuilt summary."""
 
         monthly_income_values = [
             Decimal(str(item["income"])) for item in summary.monthly_trend

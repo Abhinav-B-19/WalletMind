@@ -11,6 +11,7 @@ from backend.app.services.analysis.spending_insights_service import (
 from backend.app.services.assistant.financial_assistant_service import (
     FinancialAssistantService,
 )
+from backend.app.services.budget.budget_service import BudgetService
 from backend.app.services.health.financial_health_service import (
     FinancialHealthService,
 )
@@ -66,3 +67,9 @@ def get_financial_health_service(request: Request) -> FinancialHealthService:
     """Return the app-scoped financial health service instance."""
 
     return request.app.state.financial_health_service
+
+
+def get_budget_service(request: Request) -> BudgetService:
+    """Return the app-scoped budget recommendation service instance."""
+
+    return request.app.state.budget_service

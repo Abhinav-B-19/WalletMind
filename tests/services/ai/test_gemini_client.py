@@ -30,6 +30,20 @@ class FakeModelClient:
         return self._response
 
 
+class UnsupportedJsonModeThenSuccessModelClient:
+    def __init__(self, response: Any) -> None:
+        self._response = response
+        self.calls = 0
+        self.configs: list[dict[str, Any]] = []
+
+    def generate_content(self, prompt: str, generation_config: dict[str, Any]) -> Any:
+        self.calls += 1
+        self.configs.append(generation_config)
+        if self.calls == 1:
+            raise TypeError("Unknown field: response_schema")
+        return self._response
+
+
 class FakeSDKModule:
     def __init__(self, model_client: FakeModelClient) -> None:
         self.model_client = model_client
@@ -220,3 +234,49 @@ def test_configuration_status_handles_missing_api_key() -> None:
 
     assert configured is False
     assert model == "gemini-2.5-flash"
+
+
+def test_gemini_client_passes_json_mode_generation_config() -> None:
+    model_client = FakeModelClient(response=_make_success_response())
+    sdk_module = FakeSDKModule(model_client=model_client)
+    client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
+
+    request = client.build_request(
+        system_prompt="system",
+        user_prompt="user",
+        response_mime_type="application/json",
+        response_schema={
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+            },
+        },
+    )
+    client.generate(request)
+
+    assert model_client.last_generation_config is not None
+    assert (
+        model_client.last_generation_config["response_mime_type"] == "application/json"
+    )
+    assert "response_schema" in model_client.last_generation_config
+
+
+def test_gemini_client_falls_back_when_json_mode_not_supported() -> None:
+    model_client = UnsupportedJsonModeThenSuccessModelClient(
+        response=_make_success_response()
+    )
+    sdk_module = FakeSDKModule(model_client=model_client)
+    client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
+
+    request = client.build_request(
+        system_prompt="system",
+        user_prompt="user",
+        response_mime_type="application/json",
+        response_schema={"type": "object"},
+    )
+    response = client.generate(request)
+
+    assert response.text == "Generated answer"
+    assert model_client.calls == 2
+    assert "response_schema" in model_client.configs[0]
+    assert "response_schema" not in model_client.configs[1]

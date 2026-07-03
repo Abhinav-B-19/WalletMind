@@ -37,6 +37,7 @@ from backend.app.services.assistant.financial_assistant_service import (
     FinancialAssistantService,
 )
 from backend.app.services.assistant.retrieval_service import RetrievalService
+from backend.app.services.budget.budget_service import BudgetService
 from backend.app.services.health.financial_health_service import FinancialHealthService
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_processing_service import StatementProcessingService
@@ -92,6 +93,10 @@ def create_app() -> FastAPI:
         ai_service=app.state.ai_service,
     )
     app.state.financial_health_service = FinancialHealthService(
+        transaction_service=app.state.transaction_service,
+        ai_service=app.state.ai_service,
+    )
+    app.state.budget_service = BudgetService(
         transaction_service=app.state.transaction_service,
         ai_service=app.state.ai_service,
     )

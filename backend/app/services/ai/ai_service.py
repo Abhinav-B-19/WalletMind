@@ -36,6 +36,8 @@ class AIService:
         user_context: Mapping[str, Any] | None = None,
         temperature: float | None = None,
         max_output_tokens: int | None = None,
+        response_mime_type: str | None = None,
+        response_schema: Mapping[str, Any] | None = None,
     ) -> AIResponse:
         """Generate an AI response from business-layer inputs."""
 
@@ -48,11 +50,19 @@ class AIService:
             context=user_context,
         )
 
+        request_kwargs: dict[str, Any] = {
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "temperature": temperature,
+            "max_output_tokens": max_output_tokens,
+        }
+        if response_mime_type is not None:
+            request_kwargs["response_mime_type"] = response_mime_type
+        if response_schema is not None:
+            request_kwargs["response_schema"] = dict(response_schema)
+
         request = self._gemini_client.build_request(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
+            **request_kwargs,
         )
 
         self._logger.info("Submitting AI generation request.")

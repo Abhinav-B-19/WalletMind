@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile, status
 
 from backend.app.api.dependencies import (
+    get_budget_service,
     get_financial_health_service,
     get_processing_dispatcher,
     get_spending_insights_service,
@@ -19,6 +20,10 @@ from backend.app.schemas.response import ApiResponse, DeleteStatusData
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsResult,
     SpendingInsightsService,
+)
+from backend.app.services.budget.budget_service import (
+    BudgetRecommendationResult,
+    BudgetService,
 )
 from backend.app.services.health.financial_health_service import (
     FinancialHealthScoreResult,
@@ -211,5 +216,30 @@ def get_statement_health_score(
     result = service.generate_statement_health_score(statement_uuid=statement_uuid)
     return ApiResponse(
         message="Statement health score generated successfully.",
+        data=result,
+    )
+
+
+@router.get(
+    "/{statement_uuid}/budget-recommendations",
+    response_model=ApiResponse[BudgetRecommendationResult],
+    status_code=status.HTTP_200_OK,
+    responses=error_responses,
+)
+def get_statement_budget_recommendations(
+    statement_uuid: UUID,
+    *,
+    service: Annotated[
+        BudgetService,
+        Depends(get_budget_service),
+    ],
+) -> ApiResponse[BudgetRecommendationResult]:
+    """Generate deterministic budget recommendations with AI guidance."""
+
+    result = service.generate_statement_budget_recommendations(
+        statement_uuid=statement_uuid,
+    )
+    return ApiResponse(
+        message="Statement budget recommendations generated successfully.",
         data=result,
     )

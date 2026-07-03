@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +14,8 @@ class AIRequest(BaseModel):
     user_prompt: str = Field(..., min_length=1)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_output_tokens: int = Field(default=1024, ge=1, le=8192)
+    response_mime_type: str | None = Field(default=None, min_length=1)
+    response_schema: dict[str, Any] | None = None
 
 
 class AIResponse(BaseModel):
