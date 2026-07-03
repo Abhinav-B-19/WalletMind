@@ -363,7 +363,7 @@ describe("routing", () => {
       await screen.findByRole("heading", { name: "WalletMind" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Start Free" }),
+      screen.getByRole("link", { name: "Get Started" }),
     ).toBeInTheDocument();
   });
 });
