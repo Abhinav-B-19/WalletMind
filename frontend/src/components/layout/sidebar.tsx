@@ -49,7 +49,12 @@ const links = [
     icon: HeartPulse,
     comingSoon: false,
   },
-  { to: "/app/planner", label: "Planner", icon: Timer, comingSoon: true },
+  {
+    to: "/app/planner",
+    label: "Monthly Report",
+    icon: Timer,
+    comingSoon: false,
+  },
   { to: "/app/chat", label: "AI Assistant", icon: Bot, comingSoon: false },
   { to: "/app/settings", label: "Settings", icon: Settings, comingSoon: false },
 ];

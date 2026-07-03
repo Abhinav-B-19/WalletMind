@@ -96,6 +96,47 @@ vi.mock("@/features/ai-dashboard/hooks", () => ({
     error: null,
     refetch: vi.fn(),
   }),
+  useMonthlyReport: () => ({
+    isLoading: false,
+    isError: false,
+    dataUpdatedAt: 1762406400000,
+    data: {
+      executive_summary: "Monthly summary",
+      financial_health: {},
+      income_summary: {
+        total_income: 5000,
+        average_monthly_income: 5000,
+      },
+      expense_summary: {
+        total_expenses: 3000,
+      },
+      cash_flow: {
+        net_cash_flow: 2000,
+        savings_rate: 40,
+        monthly_trend: [
+          { month: "2026-06", income: 5000, expenses: 3000, net: 2000 },
+        ],
+      },
+      spending_insights: {},
+      budget_recommendations: {},
+      health_score: {
+        overall_score: 78,
+        grade: "B+",
+        components: {
+          savings_rate: 80,
+          income_stability: 82,
+          spending_discipline: 70,
+          recurring_obligations: 68,
+          cash_flow: 78,
+        },
+      },
+      strengths: ["Positive cash flow"],
+      risks: ["Monitor discretionary spend"],
+      action_plan: ["Set budget cap", "Track weekly", "Automate savings"],
+    },
+    error: null,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("@/features/assistant/hooks/use-assistant-chat", () => ({
@@ -277,6 +318,35 @@ describe("routing", () => {
     expect(
       await screen.findByRole("heading", {
         name: "AI Financial Assistant",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("monthly report page loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/planner?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Monthly Financial Report",
         level: 2,
       }),
     ).toBeInTheDocument();

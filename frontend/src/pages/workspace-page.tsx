@@ -45,7 +45,14 @@ const QUICK_ACTIONS = [
     href: "/app/chat",
     comingSoon: false,
   },
-  { title: "Planner", icon: Target, href: "/app/planner", comingSoon: true },
+  {
+    title: "Monthly Report",
+    description:
+      "Open your advisor-style monthly financial report with action-ready insights.",
+    icon: Target,
+    href: "/app/planner",
+    comingSoon: false,
+  },
 ];
 
 const UPCOMING_FEATURES = [
