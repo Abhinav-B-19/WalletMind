@@ -126,6 +126,10 @@ class StatementProcessingService:
                 statement = self._get_statement(session, parsed_uuid)
                 statement.parsed_transaction_count = inserted_count
                 statement.failed_transaction_count = parser_result.rows_skipped
+                statement.rows_read = parser_result.rows_read
+                statement.rows_parsed = parser_result.rows_parsed
+                statement.rows_skipped = parser_result.rows_skipped
+                statement.parsing_duration_ms = parser_metrics.duration_ms
                 statement.parsed_at = datetime.now(tz=timezone.utc)
                 statement.processing_completed_at = datetime.now(tz=timezone.utc)
 

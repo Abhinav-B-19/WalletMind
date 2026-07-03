@@ -88,6 +88,10 @@ class UploadResponseDTO(BaseModel):
     parsed_transaction_count: int = 0
     failed_transaction_count: int = 0
     parsed_at: datetime | None = None
+    rows_read: int = 0
+    rows_parsed: int = 0
+    rows_skipped: int = 0
+    parsing_duration_ms: int = 0
     analysis_status: StatementStatus
     status: StatementStatus
     uploaded_at: datetime

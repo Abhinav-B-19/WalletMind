@@ -1,4 +1,4 @@
-"""Statement parser engine and parser registry for F-2.3."""
+"""Statement parser engine and parser registry for F-2.4."""
 
 from __future__ import annotations
 
@@ -7,11 +7,14 @@ import csv
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+import io
 import json
 import logging
 import re
 from time import perf_counter
 from typing import Any
+from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
 from walletmind.schemas.transaction import ParserResultDTO, TransactionCreateDTO
 
@@ -47,6 +50,15 @@ def normalize_date(value: Any) -> date | None:
     if not text:
         return None
 
+    if re.fullmatch(r"\d+(?:\.\d+)?", text):
+        try:
+            serial = int(float(text))
+            if serial > 0:
+                excel_epoch = datetime(1899, 12, 30)
+                return (excel_epoch + timedelta(days=serial)).date()
+        except (ValueError, OverflowError):
+            pass
+
     formats = [
         "%d/%m/%Y",
         "%d-%m-%Y",
@@ -54,6 +66,8 @@ def normalize_date(value: Any) -> date | None:
         "%m/%d/%Y",
         "%d/%m/%y",
         "%Y/%m/%d",
+        "%d-%b-%Y",
+        "%d-%b-%y",
     ]
     for fmt in formats:
         try:
@@ -80,6 +94,9 @@ def normalize_amount(value: Any) -> Decimal | None:
     if not text:
         return None
 
+    if text.startswith("(") and text.endswith(")"):
+        text = f"-{text[1:-1].strip()}"
+
     sign = Decimal("1")
     if text.endswith("CR"):
         text = text.removesuffix("CR").strip()
@@ -88,6 +105,7 @@ def normalize_amount(value: Any) -> Decimal | None:
         text = text.removesuffix("DR").strip()
         sign = Decimal("-1")
 
+    text = text.replace(" ", "")
     text = re.sub(r"[^0-9.\-]", "", text)
     text = text.replace(",", "")
     if not text:
@@ -192,20 +210,110 @@ class BaseStatementParser(ABC):
 
 
 class GenericCSVParser(BaseStatementParser):
-    parser_name = "generic_csv_parser"
+    parser_name = "csv_parser"
 
-    DATE_HEADERS = {"tran date", "date", "txn date", "transaction date"}
-    DESCRIPTION_HEADERS = {"particulars", "narration", "description"}
-    DEBIT_HEADERS = {"dr", "debit", "withdrawal"}
-    CREDIT_HEADERS = {"cr", "credit", "deposit"}
-    BALANCE_HEADERS = {"bal", "balance"}
-    REFERENCE_HEADERS = {"chqno", "chq no", "cheque no", "reference", "ref"}
+    _ROW_SKIP_TOKENS = {
+        "opening balance",
+        "closing balance",
+        "grand total",
+        "total",
+        "summary",
+        "statement summary",
+        "generated on",
+        "end of statement",
+        "balance brought forward",
+        "balance carried forward",
+        "page",
+    }
 
-    def _normalize_header_token(self, value: str) -> str:
-        token = value.strip().lower()
-        token = token.replace("_", " ").replace("-", " ")
-        token = re.sub(r"\s+", " ", token)
-        return token
+    @dataclass
+    class ColumnMapping:
+        date: int | None = None
+        description: int | None = None
+        debit: int | None = None
+        credit: int | None = None
+        amount: int | None = None
+        balance: int | None = None
+        reference_number: int | None = None
+        transaction_type: int | None = None
+
+    class StatementColumnMapper:
+        _ALIASES: dict[str, tuple[str, ...]] = {
+            "date": ("date", "txn date", "transaction date", "posting date", "value date", "tran date"),
+            "description": (
+                "description",
+                "narration",
+                "remarks",
+                "transaction details",
+                "particulars",
+                "details",
+            ),
+            "debit": ("debit", "withdrawal", "dr", "withdrawals"),
+            "credit": ("credit", "deposit", "cr", "deposits"),
+            "amount": ("amount", "txn amount"),
+            "balance": ("balance", "closing balance", "running balance", "available balance", "bal"),
+            "reference_number": (
+                "reference",
+                "ref",
+                "reference no",
+                "txn id",
+                "utr",
+                "cheque no",
+                "chqno",
+                "chq no",
+            ),
+            "transaction_type": ("transaction type", "type"),
+        }
+
+        @staticmethod
+        def _normalize_header(value: str) -> str:
+            token = value.strip().lower().replace("_", " ").replace("-", " ")
+            token = re.sub(r"[^a-z0-9\s]", "", token)
+            token = re.sub(r"\s+", " ", token)
+            return token.strip()
+
+        def _match_field(self, token: str) -> str | None:
+            for field, aliases in self._ALIASES.items():
+                if token in aliases:
+                    return field
+                if len(token) >= 4 and any(
+                    token.startswith(f"{alias} ")
+                    or token.endswith(f" {alias}")
+                    or alias.startswith(f"{token} ")
+                    or alias.endswith(f" {token}")
+                    for alias in aliases
+                ):
+                    return field
+            return None
+
+        def find_mapping(self, rows: list[list[str]]) -> tuple[int | None, GenericCSVParser.ColumnMapping]:
+            best_idx: int | None = None
+            best_mapping = GenericCSVParser.ColumnMapping()
+            best_score = -1
+
+            for idx, row in enumerate(rows[:40]):
+                mapping = GenericCSVParser.ColumnMapping()
+                score = 0
+                for col_idx, raw_header in enumerate(row):
+                    token = self._normalize_header(raw_header)
+                    if not token:
+                        continue
+                    field = self._match_field(token)
+                    if field is None:
+                        continue
+                    if getattr(mapping, field) is None:
+                        setattr(mapping, field, col_idx)
+                        score += 1
+
+                if mapping.date is None or mapping.description is None:
+                    continue
+
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+                    best_mapping = mapping
+
+            return best_idx, best_mapping
 
     def _extract_metadata(self, lines: list[str]) -> dict[str, str]:
         metadata: dict[str, str] = {}
@@ -234,46 +342,17 @@ class GenericCSVParser(BaseStatementParser):
 
         return metadata
 
-    def _find_header_row(self, rows: list[list[str]]) -> tuple[int | None, dict[str, int]]:
-        for idx, row in enumerate(rows):
-            normalized = [self._normalize_header_token(cell) for cell in row]
-            if not normalized:
-                continue
-
-            has_date = any(token in self.DATE_HEADERS for token in normalized)
-            has_description = any(token in self.DESCRIPTION_HEADERS for token in normalized)
-            has_debit = any(token in self.DEBIT_HEADERS for token in normalized)
-            has_credit = any(token in self.CREDIT_HEADERS for token in normalized)
-            has_balance = any(token in self.BALANCE_HEADERS for token in normalized)
-
-            if not (has_date and has_description and (has_debit or has_credit)):
-                continue
-
-            mapping: dict[str, int] = {}
-            for col_idx, token in enumerate(normalized):
-                if token in self.DATE_HEADERS and "date" not in mapping:
-                    mapping["date"] = col_idx
-                elif token in self.DESCRIPTION_HEADERS and "description" not in mapping:
-                    mapping["description"] = col_idx
-                elif token in self.DEBIT_HEADERS and "debit" not in mapping:
-                    mapping["debit"] = col_idx
-                elif token in self.CREDIT_HEADERS and "credit" not in mapping:
-                    mapping["credit"] = col_idx
-                elif token in self.BALANCE_HEADERS and "balance" not in mapping:
-                    mapping["balance"] = col_idx
-                elif token in self.REFERENCE_HEADERS and "reference" not in mapping:
-                    mapping["reference"] = col_idx
-
-            return idx, mapping
-
-        return None, {}
-
     @staticmethod
-    def _value_at(row: list[str], idx: int | None) -> str | None:
+    def _value_at(row: list[str], idx: int | None) -> str | float | None:
         if idx is None or idx < 0 or idx >= len(row):
             return None
-        value = row[idx].strip()
-        return value or None
+        raw = row[idx]
+        if raw is None:
+            return None
+        value = str(raw).strip()
+        if value == "":
+            return None
+        return value
 
     @staticmethod
     def _is_footer_or_summary(row: list[str], description: str | None) -> bool:
@@ -281,16 +360,7 @@ class GenericCSVParser(BaseStatementParser):
         if not joined:
             return True
 
-        tokens = [
-            "total",
-            "closing balance",
-            "opening balance",
-            "statement summary",
-            "generated on",
-            "page",
-            "end of statement",
-        ]
-        if any(token in joined for token in tokens):
+        if any(token in joined for token in GenericCSVParser._ROW_SKIP_TOKENS):
             return True
 
         if description and should_skip_row(description):
@@ -298,19 +368,135 @@ class GenericCSVParser(BaseStatementParser):
 
         return False
 
-    def parse(self, *, content: bytes, filename: str, content_type: str | None) -> ParserResultDTO:
-        logger.info("CSV opened", extra={"filename": filename, "content_type": content_type})
+    @staticmethod
+    def _read_delimited_rows(content: bytes) -> list[list[str]]:
         decoded = content.decode("utf-8", errors="ignore")
         lines = decoded.splitlines()
         reader = csv.reader(lines)
-        rows = [list(row) for row in reader]
+        return [list(row) for row in reader]
+
+    @staticmethod
+    def _column_index_from_cell_ref(cell_ref: str) -> int:
+        col = 0
+        for ch in cell_ref:
+            if not ch.isalpha():
+                break
+            col = (col * 26) + (ord(ch.upper()) - ord("A") + 1)
+        return max(col - 1, 0)
+
+    def _read_xlsx_rows(self, content: bytes) -> list[list[str]]:
+        rows: list[list[str]] = []
+        with ZipFile(io.BytesIO(content)) as archive:
+            shared_strings: list[str] = []
+            if "xl/sharedStrings.xml" in archive.namelist():
+                root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+                for si in root.findall("{*}si"):
+                    text_parts = [node.text or "" for node in si.findall(".//{*}t")]
+                    shared_strings.append("".join(text_parts))
+
+            sheet_name = None
+            for candidate in archive.namelist():
+                if candidate.startswith("xl/worksheets/sheet") and candidate.endswith(".xml"):
+                    sheet_name = candidate
+                    break
+            if sheet_name is None:
+                return []
+
+            sheet_root = ET.fromstring(archive.read(sheet_name))
+            for row in sheet_root.findall(".//{*}row"):
+                parsed_row: list[str] = []
+                for cell in row.findall("{*}c"):
+                    idx = self._column_index_from_cell_ref(cell.get("r", "A1"))
+                    while len(parsed_row) <= idx:
+                        parsed_row.append("")
+
+                    cell_type = cell.get("t")
+                    value_node = cell.find("{*}v")
+                    inline_node = cell.find(".//{*}t")
+                    value = ""
+                    if cell_type == "s" and value_node is not None:
+                        try:
+                            value = shared_strings[int(value_node.text or "0")]
+                        except (ValueError, IndexError):
+                            value = value_node.text or ""
+                    elif inline_node is not None:
+                        value = inline_node.text or ""
+                    elif value_node is not None:
+                        value = value_node.text or ""
+
+                    parsed_row[idx] = value
+
+                rows.append(parsed_row)
+        return rows
+
+    def _read_rows(self, *, content: bytes, filename: str) -> list[list[str]]:
+        lower = filename.lower()
+        if lower.endswith(".xlsx"):
+            try:
+                return self._read_xlsx_rows(content)
+            except Exception:
+                return self._read_delimited_rows(content)
+        return self._read_delimited_rows(content)
+
+    def _normalize_from_row(
+        self,
+        *,
+        row: list[str],
+        row_number: int,
+        mapping: ColumnMapping,
+        metadata: dict[str, str],
+    ) -> TransactionCreateDTO | None:
+        date_value = self._value_at(row, mapping.date)
+        description_value = self._value_at(row, mapping.description)
+        debit_value = self._value_at(row, mapping.debit)
+        credit_value = self._value_at(row, mapping.credit)
+        amount_value = self._value_at(row, mapping.amount)
+        balance_value = self._value_at(row, mapping.balance)
+        reference_value = self._value_at(row, mapping.reference_number)
+        tx_type_value = self._value_at(row, mapping.transaction_type)
+
+        normalized = normalize_transaction(
+            date_value=date_value,
+            description_value=description_value,
+            debit_value=debit_value,
+            credit_value=credit_value,
+            amount_value=amount_value,
+            balance_value=balance_value,
+            currency=metadata.get("currency"),
+            reference_number=str(reference_value) if reference_value is not None else None,
+            raw_row={"row_number": row_number, "columns": row},
+        )
+        if normalized is None:
+            return None
+
+        if tx_type_value:
+            forced = str(tx_type_value).strip().lower()
+            if forced in {"dr", "debit"}:
+                normalized.transaction_type = "debit"
+                if normalized.amount > 0:
+                    normalized.amount = -normalized.amount
+            elif forced in {"cr", "credit"}:
+                normalized.transaction_type = "credit"
+                if normalized.amount < 0:
+                    normalized.amount = -normalized.amount
+
+        return normalized
+
+    def parse(self, *, content: bytes, filename: str, content_type: str | None) -> ParserResultDTO:
+        logger.info("CSV opened", extra={"filename": filename, "content_type": content_type})
+        rows = self._read_rows(content=content, filename=filename)
+        decoded = content.decode("utf-8", errors="ignore")
+        lines = decoded.splitlines()
 
         metadata = self._extract_metadata(lines)
-        header_index, column_map = self._find_header_row(rows)
+        mapper = self.StatementColumnMapper()
+        header_index, mapping = mapper.find_mapping(rows)
 
         if header_index is None:
             return ParserResultDTO(
                 parser_name=self.parser_name,
+                rows_read=len(rows),
+                rows_parsed=0,
                 rows_scanned=len(rows),
                 rows_skipped=len(rows),
                 transactions=[],
@@ -323,44 +509,34 @@ class GenericCSVParser(BaseStatementParser):
             extra={
                 "filename": filename,
                 "header_row": header_index + 1,
-                "column_map": column_map,
+                "column_map": mapping.__dict__,
             },
         )
 
         transactions: list[TransactionCreateDTO] = []
+        rows_read = 0
         rows_scanned = 0
         rows_skipped = 0
         errors: list[str] = []
 
-        date_idx = column_map.get("date")
-        description_idx = column_map.get("description")
-        debit_idx = column_map.get("debit")
-        credit_idx = column_map.get("credit")
-        balance_idx = column_map.get("balance")
-        reference_idx = column_map.get("reference")
-
         for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
+            rows_read += 1
             rows_scanned += 1
             try:
                 if all(not cell.strip() for cell in row):
                     rows_skipped += 1
                     continue
 
-                description_value = self._value_at(row, description_idx)
+                description_value = self._value_at(row, mapping.description)
                 if self._is_footer_or_summary(row, description_value):
                     rows_skipped += 1
                     continue
 
-                normalized = normalize_transaction(
-                    date_value=self._value_at(row, date_idx),
-                    description_value=description_value,
-                    debit_value=self._value_at(row, debit_idx),
-                    credit_value=self._value_at(row, credit_idx),
-                    amount_value=None,
-                    balance_value=self._value_at(row, balance_idx),
-                    currency=metadata.get("currency"),
-                    reference_number=self._value_at(row, reference_idx),
-                    raw_row={"row_number": row_number, "columns": row},
+                normalized = self._normalize_from_row(
+                    row=row,
+                    row_number=row_number,
+                    mapping=mapping,
+                    metadata=metadata,
                 )
                 if normalized is None:
                     rows_skipped += 1
@@ -382,6 +558,8 @@ class GenericCSVParser(BaseStatementParser):
 
         return ParserResultDTO(
             parser_name=self.parser_name,
+            rows_read=rows_read,
+            rows_parsed=len(transactions),
             rows_scanned=rows_scanned,
             rows_skipped=rows_skipped,
             transactions=transactions,
@@ -391,11 +569,11 @@ class GenericCSVParser(BaseStatementParser):
 
 
 class GenericExcelParser(GenericCSVParser):
-    parser_name = "generic_excel_parser"
+    parser_name = "excel_parser"
 
 
 class GenericPDFParser(BaseStatementParser):
-    parser_name = "generic_pdf_parser"
+    parser_name = "pdf_parser"
 
     def parse(self, *, content: bytes, filename: str, content_type: str | None) -> ParserResultDTO:
         # Lightweight text extraction strategy for text-based PDFs only.
@@ -431,6 +609,8 @@ class GenericPDFParser(BaseStatementParser):
 
         return ParserResultDTO(
             parser_name=self.parser_name,
+            rows_read=rows_scanned,
+            rows_parsed=len(transactions),
             rows_scanned=rows_scanned,
             rows_skipped=rows_skipped,
             transactions=transactions,
@@ -439,7 +619,7 @@ class GenericPDFParser(BaseStatementParser):
 
 
 class OCRParser(GenericPDFParser):
-    parser_name = "ocr_pipeline"
+    parser_name = "ocr_parser"
 
 
 class ParserRegistry:

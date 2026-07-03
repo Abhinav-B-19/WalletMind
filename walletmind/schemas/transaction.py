@@ -47,6 +47,8 @@ class ParserResultDTO(BaseModel):
     """Parser output with extraction and skip/failure metrics."""
 
     parser_name: str
+    rows_read: int = 0
+    rows_parsed: int = 0
     rows_scanned: int = 0
     rows_skipped: int = 0
     transactions: list[TransactionCreateDTO] = Field(default_factory=list)
