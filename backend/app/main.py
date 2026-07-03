@@ -1,5 +1,7 @@
 """FastAPI entry point for WalletMind backend."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import sys
@@ -26,6 +28,7 @@ from backend.app.api.router import api_router
 from backend.app.core.config import STORAGE_DIR
 from backend.app.database.init_db import init_database
 from backend.app.database.session import SessionLocal
+from backend.app.services.ai.ai_service import AIService
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
@@ -67,6 +70,7 @@ def create_app() -> FastAPI:
         session_factory=SessionLocal,
     )
     app.state.transaction_service = TransactionService(session_factory=SessionLocal)
+    app.state.ai_service = AIService()
     app.state.processing_dispatcher = ProcessingDispatcher(
         processing_service=app.state.statement_processing_service,
     )

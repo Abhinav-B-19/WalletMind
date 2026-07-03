@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import Request
 
+from backend.app.services.ai.ai_service import AIService
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.transaction_service import TransactionService
@@ -32,3 +33,9 @@ def get_transaction_service(request: Request) -> TransactionService:
     """Return the app-scoped transaction service instance."""
 
     return request.app.state.transaction_service
+
+
+def get_ai_service(request: Request) -> AIService:
+    """Return the app-scoped AI service instance."""
+
+    return request.app.state.ai_service
