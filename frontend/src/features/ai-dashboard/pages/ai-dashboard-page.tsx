@@ -393,7 +393,15 @@ export function AIDashboardPage() {
           description="Focus recommendations with the highest immediate impact."
           action={
             <Button asChild variant="secondary" size="sm">
-              <Link to="/app/planner">View More</Link>
+              <Link
+                to={
+                  selectedStatementUuid
+                    ? `/app/budget?statement_id=${selectedStatementUuid}`
+                    : "/app/budget"
+                }
+              >
+                View More
+              </Link>
             </Button>
           }
         >

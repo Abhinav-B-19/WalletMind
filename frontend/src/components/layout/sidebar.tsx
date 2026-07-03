@@ -5,6 +5,7 @@ import {
   HeartPulse,
   Home,
   LogOut,
+  PiggyBank,
   Settings,
   Sparkles,
   Timer,
@@ -34,6 +35,12 @@ const links = [
     to: "/app/insights",
     label: "Spending Insights",
     icon: Sparkles,
+    comingSoon: false,
+  },
+  {
+    to: "/app/budget",
+    label: "Budget Recommendations",
+    icon: PiggyBank,
     comingSoon: false,
   },
   {

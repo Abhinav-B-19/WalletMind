@@ -76,6 +76,26 @@ vi.mock("@/features/ai-dashboard/hooks", () => ({
     error: null,
     refetch: vi.fn(),
   }),
+  useBudgetRecommendations: () => ({
+    isLoading: false,
+    isError: false,
+    dataUpdatedAt: 1762406400000,
+    data: {
+      monthly_budget: {
+        Food: {
+          historical: 120,
+          recommended: 100,
+          potential_saving: 20,
+        },
+      },
+      overall_potential_savings: 20,
+      priority_recommendations: [],
+      ai_summary: "Summary",
+      ai_recommendations: [],
+    },
+    error: null,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("@/context/global-loader-context", () => ({
@@ -191,6 +211,35 @@ describe("routing", () => {
 
     expect(
       await screen.findByRole("heading", { name: "Spending Insights" }),
+    ).toBeInTheDocument();
+  });
+
+  it("budget page loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/budget?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Budget Recommendations",
+        level: 2,
+      }),
     ).toBeInTheDocument();
   });
 

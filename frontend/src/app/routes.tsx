@@ -7,6 +7,7 @@ import {
 import { AppLayout } from "@/components/layout/app-layout";
 import { PublicLayout } from "@/components/layout/public-layout";
 import { AppChatPage } from "@/pages/app-chat-page";
+import { AppBudgetRecommendationsPage } from "@/pages/app-budget-recommendations-page";
 import { AppDashboardPage } from "@/pages/app-dashboard-page";
 import { AppFinancialHealthPage } from "@/pages/app-financial-health-page";
 import { AppInsightsPage } from "@/pages/app-insights-page";
@@ -62,6 +63,7 @@ export const appRoutes = createRoutesFromElements(
       <Route path="statements" element={<AppStatementsPage />} />
       <Route path="statements/upload" element={<AppStatementUploadPage />} />
       <Route path="dashboard" element={<AppDashboardPage />} />
+      <Route path="budget" element={<AppBudgetRecommendationsPage />} />
       <Route path="insights" element={<AppInsightsPage />} />
       <Route path="health" element={<AppFinancialHealthPage />} />
       <Route path="planner" element={<AppPlannerPage />} />
