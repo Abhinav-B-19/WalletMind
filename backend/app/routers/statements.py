@@ -9,12 +9,15 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile,
 from backend.app.api.dependencies import (
     get_processing_dispatcher,
     get_statement_upload_service,
+    get_transaction_service,
 )
 from backend.app.api.schemas import ErrorResponse
 from backend.app.schemas.response import ApiResponse, DeleteStatusData
 from walletmind.schemas.statement import UploadResponseDTO
+from walletmind.schemas.transaction import TransactionDTO
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
+from walletmind.services.transaction_service import TransactionService
 
 router = APIRouter(prefix="/statements", tags=["statements"])
 
@@ -109,3 +112,19 @@ def delete_statement(
         message="Statement deleted successfully.",
         data=DeleteStatusData(statement_uuid=str(statement_uuid)),
     )
+
+
+@router.get(
+    "/{statement_uuid}/transactions",
+    response_model=ApiResponse[list[TransactionDTO]],
+    status_code=status.HTTP_200_OK,
+    responses=error_responses,
+)
+def get_statement_transactions(
+    statement_uuid: UUID,
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[list[TransactionDTO]]:
+    """List all parsed transactions for a statement."""
+
+    rows = service.get_statement_transactions(statement_uuid=statement_uuid)
+    return ApiResponse(message="Statement transactions retrieved successfully.", data=rows)

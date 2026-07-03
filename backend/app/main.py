@@ -29,6 +29,7 @@ from backend.app.database.session import SessionLocal
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
+from walletmind.services.transaction_service import TransactionService
 from walletmind.services.user_service import UserService
 
 
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.state.statement_processing_service = StatementProcessingService(
         session_factory=SessionLocal,
     )
+    app.state.transaction_service = TransactionService(session_factory=SessionLocal)
     app.state.processing_dispatcher = ProcessingDispatcher(
         processing_service=app.state.statement_processing_service,
     )

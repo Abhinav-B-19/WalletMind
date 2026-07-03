@@ -7,7 +7,9 @@ import csv
 from io import StringIO
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
+from walletmind.services.bank_detection_service import BankDetectionService
 from walletmind.utils.file_uploads import detect_file_type
 
 
@@ -37,6 +39,7 @@ class FileInspectionResult:
     columns: tuple[str, ...]
     sample_rows: tuple[str, ...]
     metadata_signals: tuple[str, ...]
+    header_text: str
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,7 @@ class FileInspector:
             file_bytes=file_bytes,
             extension=extension,
         )
+        header_text = self._extract_pdf_header_text(file_bytes=file_bytes, extension=extension)
 
         metadata_signals = tuple(
             signal
@@ -86,6 +90,7 @@ class FileInspector:
             columns=columns,
             sample_rows=sample_rows,
             metadata_signals=metadata_signals,
+            header_text=header_text,
         )
 
     @staticmethod
@@ -144,149 +149,61 @@ class FileInspector:
         )
         return header_keywords, columns, sample_rows
 
+    @staticmethod
+    def _extract_pdf_header_text(*, file_bytes: bytes, extension: str) -> str:
+        if extension != ".pdf":
+            return ""
+        decoded = file_bytes.decode("utf-8", errors="ignore")
+        lines = [line.strip() for line in decoded.splitlines() if line.strip()]
+        return " ".join(lines[:10])
+
 
 class BankDetector:
     """Determines target institution using multi-signal weighted heuristics."""
 
-    _SIGNALS: dict[str, dict[str, tuple[str, ...]]] = {
-        "Axis Bank": {
-            "sheet": ("axis",),
-            "header": ("particulars", "tran date", "balance", "cr/dr"),
-            "column": ("particulars", "tran date", "balance", "cr/dr"),
-            "rows": ("axis",),
-            "filename": ("axis",),
-        },
-        "Tamilnad Mercantile Bank (TMB)": {
-            "sheet": ("tmb", "tamilnad"),
-            "header": ("date", "narration", "withdrawal", "deposit"),
-            "column": ("date", "narration", "withdrawal", "deposit"),
-            "rows": ("tmb", "tamilnad"),
-            "filename": ("tmb", "tamilnad"),
-        },
-        "Canara Bank": {
-            "sheet": ("canara",),
-            "header": ("txn date", "description", "debit", "credit", "balance"),
-            "column": ("txn date", "description", "debit", "credit", "balance"),
-            "rows": ("canara",),
-            "filename": ("canara",),
-        },
-    }
-
-    _WEIGHTS = {
-        "sheet": 0.35,
-        "header": 0.25,
-        "column": 0.2,
-        "rows": 0.1,
-        "filename": 0.07,
-        "metadata": 0.03,
-    }
+    def __init__(self, *, detector: BankDetectionService | None = None) -> None:
+        self._detector = detector or BankDetectionService()
 
     def detect(self, inspection: FileInspectionResult) -> DetectionDecision:
-        best_bank = "Unknown"
-        best_score = 0.0
-        best_method = "fallback:unknown"
+        decision = self._detector.detect_bank(
+            metadata_text=" ".join(inspection.metadata_signals),
+            header_text=inspection.header_text,
+            worksheet_title=" ".join(inspection.sheet_names),
+            csv_headers=list(inspection.header_keywords or inspection.columns),
+            filename=inspection.filename,
+        )
 
-        filename = inspection.filename.lower()
-        row_blob = " ".join(inspection.sample_rows).lower()
-        metadata_blob = " ".join(inspection.metadata_signals).lower()
-
-        for bank_name, rules in self._SIGNALS.items():
-            score = 0.0
-            methods: list[str] = []
-
-            sheet_ratio = self._match_ratio(inspection.sheet_names, rules["sheet"])
-            if sheet_ratio > 0:
-                score += self._WEIGHTS["sheet"] * sheet_ratio
-                methods.append("sheet-name")
-
-            header_ratio = self._match_ratio(inspection.header_keywords, rules["header"])
-            if header_ratio > 0:
-                score += self._WEIGHTS["header"] * header_ratio
-                methods.append("header-keyword")
-
-            column_ratio = self._match_ratio(inspection.columns, rules["column"])
-            if column_ratio > 0:
-                score += self._WEIGHTS["column"] * column_ratio
-                methods.append("column-name")
-
-            row_ratio = self._match_ratio((row_blob,), rules["rows"])
-            if row_ratio > 0:
-                score += self._WEIGHTS["rows"] * row_ratio
-                methods.append("row-sample")
-
-            filename_ratio = self._match_ratio((filename,), rules["filename"])
-            if filename_ratio > 0:
-                score += self._WEIGHTS["filename"] * filename_ratio
-                methods.append("filename")
-
-            metadata_ratio = self._match_ratio((metadata_blob,), rules["filename"])
-            if metadata_ratio > 0:
-                score += self._WEIGHTS["metadata"] * metadata_ratio
-                methods.append("metadata")
-
-            if score > best_score:
-                best_score = score
-                best_bank = bank_name
-                best_method = " + ".join(methods) if methods else "fallback"
-
-        if best_score < 0.2:
+        if decision.bank_name == "Unknown":
             return DetectionDecision(
                 bank_name="Unknown",
                 confidence=0.0,
                 method="fallback:unknown",
-                unknown_reason="Insufficient known bank signals in sheet/header/rows/filename.",
+                unknown_reason="Insufficient known bank signals in document metadata/header/sheet/csv/filename.",
             )
 
-        confidence = min(0.99, round(best_score, 2))
         return DetectionDecision(
-            bank_name=best_bank,
-            confidence=confidence,
-            method=best_method,
+            bank_name=decision.bank_name,
+            confidence=decision.confidence,
+            method=decision.method,
             unknown_reason=None,
         )
-
-    @staticmethod
-    def _match_ratio(haystack: tuple[str, ...], needles: tuple[str, ...]) -> float:
-        if not needles:
-            return 0.0
-        haystack_blob = " ".join(item.lower() for item in haystack)
-        matched = sum(1 for needle in needles if needle.lower() in haystack_blob)
-        return matched / len(needles)
 
 
 class ParserResolver:
     """Resolves parser implementation key from file type and detected bank."""
 
-    _BANK_FORMAT_PARSERS = {
-        ("Axis Bank", "xls"): "axis_excel_parser",
-        ("Axis Bank", "xlsx"): "axis_excel_parser",
-        ("Axis Bank", "csv"): "axis_excel_parser",
-        ("Tamilnad Mercantile Bank (TMB)", "xls"): "tmb_excel_parser",
-        ("Tamilnad Mercantile Bank (TMB)", "xlsx"): "tmb_excel_parser",
-        ("Tamilnad Mercantile Bank (TMB)", "csv"): "tmb_excel_parser",
-        ("Canara Bank", "xls"): "canara_excel_parser",
-        ("Canara Bank", "xlsx"): "canara_excel_parser",
-        ("Canara Bank", "csv"): "canara_excel_parser",
-    }
-
     _GENERIC_FORMAT_PARSERS = {
-        "xls": "generic_excel_parser",
-        "xlsx": "generic_excel_parser",
-        "csv": "generic_excel_parser",
-        "pdf": "generic_pdf_parser",
-        "png": "ocr_pipeline",
-        "jpg": "ocr_pipeline",
-        "jpeg": "ocr_pipeline",
-        "ofx": "generic_ofx_parser",
-        "qif": "generic_qif_parser",
-        "zip": "archive_classifier",
+        "xls": "excel_parser",
+        "xlsx": "excel_parser",
+        "csv": "csv_parser",
+        "pdf": "pdf_parser",
+        "png": "ocr_parser",
+        "jpg": "ocr_parser",
+        "jpeg": "ocr_parser",
         "unknown": "unknown",
     }
 
     def resolve(self, *, bank_name: str, detected_file_type: str) -> str:
-        specific = self._BANK_FORMAT_PARSERS.get((bank_name, detected_file_type))
-        if specific:
-            return specific
         return self._GENERIC_FORMAT_PARSERS.get(detected_file_type, "unknown")
 
 

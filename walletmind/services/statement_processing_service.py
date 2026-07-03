@@ -14,18 +14,21 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from backend.app.models.statement import Statement, StatementStatus
 from walletmind.exceptions import StatementNotFoundError, StatementStorageError
+from walletmind.services.statement_parsers import ParserFactory, ParserRegistry
 from walletmind.services.statement_classifier import (
     BankDetector,
     FileInspector,
     ParserResolver,
     StatementClassifier,
 )
+from walletmind.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
+parser_logger = logging.getLogger("walletmind.parsers")
 
 
 class StatementProcessingService:
-    """Coordinates statement classification status transitions without transaction parsing."""
+    """Coordinates statement classification and transaction parsing status transitions."""
 
     def __init__(self, *, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
@@ -34,6 +37,8 @@ class StatementProcessingService:
             bank_detector=BankDetector(),
             parser_resolver=ParserResolver(),
         )
+        self._parser_factory = ParserFactory(registry=ParserRegistry())
+        self._transaction_service = TransactionService(session_factory=session_factory)
 
     def process_statement(
         self,
@@ -43,7 +48,7 @@ class StatementProcessingService:
         stored_file_path: str,
         content_type: str | None = None,
     ) -> None:
-        """Run classification pipeline: uploaded -> classifying -> classified -> ready_for_parsing."""
+        """Run classification and parsing pipeline until ready_for_analysis."""
 
         parsed_uuid = self._coerce_uuid(statement_uuid)
         started_at = datetime.now(tz=timezone.utc)
@@ -90,6 +95,55 @@ class StatementProcessingService:
                 statement.status = StatementStatus.READY_FOR_PARSING
                 statement.processing_completed_at = datetime.now(tz=timezone.utc)
                 session.commit()
+
+            try:
+                parser_result, parser_metrics = self._parser_factory.execute(
+                    parser_name=classification_result.parser_type,
+                    content=file_bytes,
+                    filename=original_filename,
+                    content_type=content_type,
+                )
+
+                inserted_count, duplicate_count = self._transaction_service.store_transactions(
+                    statement_uuid=parsed_uuid,
+                    transactions=parser_result.transactions,
+                )
+
+                parser_logger.info(
+                    "Transactions stored",
+                    extra={
+                        "statement_uuid": str(parsed_uuid),
+                        "transactions_extracted": len(parser_result.transactions),
+                        "transactions_stored": inserted_count,
+                        "duplicates_skipped": duplicate_count,
+                    },
+                )
+            except Exception as exc:  # noqa: BLE001
+                self._mark_parse_failed(parsed_uuid, str(exc))
+                raise
+
+            with self._session_factory() as session:
+                statement = self._get_statement(session, parsed_uuid)
+                statement.parsed_transaction_count = inserted_count
+                statement.failed_transaction_count = parser_result.rows_skipped
+                statement.parsed_at = datetime.now(tz=timezone.utc)
+                statement.processing_completed_at = datetime.now(tz=timezone.utc)
+
+                if inserted_count > 0:
+                    statement.status = StatementStatus.READY_FOR_ANALYSIS
+                    statement.processing_error = None
+                else:
+                    statement.status = StatementStatus.PARSE_FAILED
+                    parser_error = (
+                        "Transaction parsing produced zero transactions. "
+                        f"Rows scanned={parser_result.rows_scanned}, rows skipped={parser_result.rows_skipped}."
+                    )
+                    if parser_result.errors:
+                        parser_error = f"{parser_error} Errors: {', '.join(parser_result.errors[:3])}"
+                    statement.processing_error = parser_error[:500]
+
+                session.commit()
+
                 logger.info(
                     "Statement classified",
                     extra={
@@ -101,6 +155,12 @@ class StatementProcessingService:
                         "classification_duration_ms": int(
                             (perf_counter() - pipeline_started) * 1000
                         ),
+                        "parser_selected": parser_result.parser_name,
+                        "rows_scanned": parser_result.rows_scanned,
+                        "rows_skipped": parser_result.rows_skipped,
+                        "transactions_extracted": inserted_count,
+                        "duplicates_skipped": duplicate_count,
+                        "parser_duration_ms": parser_metrics.duration_ms,
                         "unknown_reason": classification_result.unknown_reason,
                         "status": statement.status.value,
                     },
@@ -111,13 +171,24 @@ class StatementProcessingService:
             self._mark_failed(parsed_uuid, str(exc))
             raise StatementStorageError("Failed to process statement metadata") from exc
         except Exception as exc:
-            self._mark_failed(parsed_uuid, str(exc))
+            with self._session_factory() as session:
+                statement = self._get_statement(session, parsed_uuid)
+                if statement.status != StatementStatus.PARSE_FAILED:
+                    self._mark_failed(parsed_uuid, str(exc))
             raise
 
     def _mark_failed(self, statement_uuid: UUID, error_message: str) -> None:
         with self._session_factory() as session:
             statement = self._get_statement(session, statement_uuid)
             statement.status = StatementStatus.FAILED
+            statement.processing_completed_at = datetime.now(tz=timezone.utc)
+            statement.processing_error = error_message[:500]
+            session.commit()
+
+    def _mark_parse_failed(self, statement_uuid: UUID, error_message: str) -> None:
+        with self._session_factory() as session:
+            statement = self._get_statement(session, statement_uuid)
+            statement.status = StatementStatus.PARSE_FAILED
             statement.processing_completed_at = datetime.now(tz=timezone.utc)
             statement.processing_error = error_message[:500]
             session.commit()

@@ -15,6 +15,7 @@ from backend.app.models.user import User
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_processing_service import StatementProcessingService
 from walletmind.services.statement_upload_service import StatementUploadService
+from walletmind.services.transaction_service import TransactionService
 from walletmind.services.user_service import UserService
 
 
@@ -41,6 +42,7 @@ def _setup_client_with_statement_service(tmp_path, processing_dispatcher: Proces
     app.state.statement_processing_service = StatementProcessingService(
         session_factory=session_factory,
     )
+    app.state.transaction_service = TransactionService(session_factory=session_factory)
     app.state.processing_dispatcher = processing_dispatcher or ProcessingDispatcher(
         processing_service=app.state.statement_processing_service,
     )
@@ -71,7 +73,13 @@ def test_statement_upload_endpoint(tmp_path) -> None:
     response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("june.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+        files={
+            "file": (
+                "june.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,120\n",
+                "text/csv",
+            )
+        },
     )
 
     assert response.status_code == 201
@@ -81,8 +89,11 @@ def test_statement_upload_endpoint(tmp_path) -> None:
     assert body["data"]["statement_uuid"]
     assert body["data"]["original_filename"] == "june.csv"
     assert body["data"]["file_type"] == "csv"
-    assert body["data"]["analysis_status"] == "ready_for_parsing"
-    assert body["data"]["status"] == "ready_for_parsing"
+    assert body["data"]["analysis_status"] == "ready_for_analysis"
+    assert body["data"]["status"] == "ready_for_analysis"
+    assert body["data"]["parsed_transaction_count"] >= 1
+    assert body["data"]["failed_transaction_count"] >= 0
+    assert body["data"]["parsed_at"] is not None
     assert body["data"]["classification_confidence"] is not None
     assert body["data"]["classification_method"] is not None
     assert body["data"]["classified_at"] is not None
@@ -95,7 +106,13 @@ def test_statement_list_endpoint(tmp_path) -> None:
     client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("june.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+        files={
+            "file": (
+                "june.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,120\n",
+                "text/csv",
+            )
+        },
     )
 
     response = client.get("/api/v1/statements")
@@ -127,12 +144,24 @@ def test_statement_list_endpoint_filters_by_user_uuid(tmp_path) -> None:
     client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user_one.uuid},
-        files={"file": ("u1.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+        files={
+            "file": (
+                "u1.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,120\n",
+                "text/csv",
+            )
+        },
     )
     client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user_two.uuid},
-        files={"file": ("u2.csv", b"date,amount\n2026-06-01,220\n", "text/csv")},
+        files={
+            "file": (
+                "u2.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,220\n",
+                "text/csv",
+            )
+        },
     )
 
     response = client.get(f"/api/v1/statements?user_uuid={user_one.uuid}")
@@ -152,7 +181,13 @@ def test_statement_upload_list_delete_workflow(tmp_path) -> None:
     upload_response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("workflow.csv", b"date,amount\n2026-08-01,500\n", "text/csv")},
+        files={
+            "file": (
+                "workflow.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-08-01,Salary,0,500\n",
+                "text/csv",
+            )
+        },
     )
     assert upload_response.status_code == 201
     statement_uuid = upload_response.json()["data"]["statement_uuid"]
@@ -209,7 +244,13 @@ def test_statement_delete_endpoint(tmp_path) -> None:
     upload_response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("aug.csv", b"date,amount\n2026-08-01,200\n", "text/csv")},
+        files={
+            "file": (
+                "aug.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-08-01,Salary,0,200\n",
+                "text/csv",
+            )
+        },
     )
     body = upload_response.json()["data"]
     statement_uuid = body["statement_uuid"]
@@ -251,7 +292,13 @@ def test_create_user_then_upload_statement_uses_same_database(tmp_path) -> None:
     upload_response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user_uuid},
-        files={"file": ("income.csv", b"date,amount\n2026-07-01,300\n", "text/csv")},
+        files={
+            "file": (
+                "income.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-07-01,Salary,0,300\n",
+                "text/csv",
+            )
+        },
     )
     assert upload_response.status_code == 201
     statement_uuid = upload_response.json()["data"]["statement_uuid"]
@@ -271,32 +318,41 @@ def test_create_user_then_upload_statement_uses_same_database(tmp_path) -> None:
     assert matched_statements[0].user_id == matched_users[0].id
 
 
-def test_upload_pipeline_transitions_to_ready_for_parsing(tmp_path) -> None:
+def test_upload_pipeline_transitions_to_ready_for_analysis(tmp_path) -> None:
     client, session_factory = _setup_client_with_statement_service(tmp_path)
     user = _create_persisted_user(session_factory)
 
     response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("pipeline.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+        files={
+            "file": (
+                "pipeline.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,120\n",
+                "text/csv",
+            )
+        },
     )
 
     assert response.status_code == 201
     statement_uuid = response.json()["data"]["statement_uuid"]
-    assert response.json()["data"]["status"] == "ready_for_parsing"
+    assert response.json()["data"]["status"] == "ready_for_analysis"
 
     with session_factory() as session:
         statement = session.scalar(select(Statement).where(Statement.uuid == statement_uuid))
 
     assert statement is not None
-    assert statement.status.value == "ready_for_parsing"
+    assert statement.status.value == "ready_for_analysis"
     assert statement.detected_file_type == "csv"
-    assert statement.parser_type == "generic_excel_parser"
+    assert statement.parser_type is not None
     assert statement.processing_started_at is not None
     assert statement.processing_completed_at is not None
     assert statement.classification_confidence is not None
     assert statement.classification_method is not None
     assert statement.classified_at is not None
+    assert statement.parsed_transaction_count >= 1
+    assert statement.failed_transaction_count >= 0
+    assert statement.parsed_at is not None
 
 
 def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
@@ -332,7 +388,13 @@ def test_upload_dispatches_processing_via_dispatcher(tmp_path) -> None:
     response = client.post(
         "/api/v1/statements/upload",
         data={"user_uuid": user.uuid},
-        files={"file": ("dispatch.csv", b"date,amount\n2026-06-01,120\n", "text/csv")},
+        files={
+            "file": (
+                "dispatch.csv",
+                b"Date,Narration,Withdrawal,Deposit\n2026-06-01,Salary,0,120\n",
+                "text/csv",
+            )
+        },
     )
 
     assert response.status_code == 201
@@ -352,7 +414,7 @@ def test_upload_axis_statement_classified_with_axis_parser(tmp_path) -> None:
         files={
             "file": (
                 "axis_statement.csv",
-                b"Tran Date,Particulars,CR/DR,Balance\n2026-07-01,Salary,CR,10000\n",
+                b"Tran Date,CHQNO,PARTICULARS,DR,CR,BAL,SOL\n2026-07-01,-,Salary,0,10000,10000,014\n",
                 "text/csv",
             )
         },
@@ -361,8 +423,8 @@ def test_upload_axis_statement_classified_with_axis_parser(tmp_path) -> None:
     assert response.status_code == 201
     body = response.json()["data"]
     assert body["bank_name"] == "Axis Bank"
-    assert body["parser_type"] == "axis_excel_parser"
-    assert body["status"] == "ready_for_parsing"
+    assert body["parser_type"] == "csv_parser"
+    assert body["status"] == "ready_for_analysis"
 
 
 def test_upload_tmb_statement_classified_with_tmb_parser(tmp_path) -> None:
@@ -383,8 +445,8 @@ def test_upload_tmb_statement_classified_with_tmb_parser(tmp_path) -> None:
 
     assert response.status_code == 201
     body = response.json()["data"]
-    assert body["bank_name"] == "Tamilnad Mercantile Bank (TMB)"
-    assert body["parser_type"] == "tmb_excel_parser"
+    assert body["bank_name"] == "Tamilnad Mercantile Bank"
+    assert body["parser_type"] == "csv_parser"
 
 
 def test_upload_canara_statement_classified_with_canara_parser(tmp_path) -> None:
@@ -406,7 +468,7 @@ def test_upload_canara_statement_classified_with_canara_parser(tmp_path) -> None
     assert response.status_code == 201
     body = response.json()["data"]
     assert body["bank_name"] == "Canara Bank"
-    assert body["parser_type"] == "canara_excel_parser"
+    assert body["parser_type"] == "csv_parser"
 
 
 def test_upload_unknown_statement_classified_with_generic_parser(tmp_path) -> None:
@@ -428,4 +490,5 @@ def test_upload_unknown_statement_classified_with_generic_parser(tmp_path) -> No
     assert response.status_code == 201
     body = response.json()["data"]
     assert body["bank_name"] == "Unknown"
-    assert body["parser_type"] == "generic_excel_parser"
+    assert body["parser_type"] == "csv_parser"
+    assert body["status"] == "parse_failed"

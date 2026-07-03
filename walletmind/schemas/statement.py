@@ -21,6 +21,8 @@ class StatementStatus(str, Enum):
     READY_FOR_PARSING = "ready_for_parsing"
     PARSED = "parsed"
     ANALYSIS_PENDING = "analysis_pending"
+    READY_FOR_ANALYSIS = "ready_for_analysis"
+    PARSE_FAILED = "parse_failed"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -83,6 +85,9 @@ class UploadResponseDTO(BaseModel):
     classification_confidence: float | None = None
     classification_method: str | None = None
     classified_at: datetime | None = None
+    parsed_transaction_count: int = 0
+    failed_transaction_count: int = 0
+    parsed_at: datetime | None = None
     analysis_status: StatementStatus
     status: StatementStatus
     uploaded_at: datetime

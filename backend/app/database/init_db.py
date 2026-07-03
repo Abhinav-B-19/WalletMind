@@ -7,6 +7,7 @@ from backend.app.core.config import DATABASE_DIR
 from backend.app.database.base import Base
 from backend.app.database.session import engine
 from backend.app.models.statement import Statement  # noqa: F401
+from backend.app.models.transaction import Transaction  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
 
 
@@ -44,6 +45,9 @@ def _reconcile_sqlite_statement_schema(database_engine: Engine) -> None:
         "classification_confidence": "FLOAT",
         "classification_method": "VARCHAR(120)",
         "classified_at": "DATETIME",
+        "parsed_transaction_count": "INTEGER DEFAULT 0",
+        "failed_transaction_count": "INTEGER DEFAULT 0",
+        "parsed_at": "DATETIME",
         "processing_started_at": "DATETIME",
         "processing_completed_at": "DATETIME",
         "processing_error": "VARCHAR(500)",

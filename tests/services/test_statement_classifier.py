@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from walletmind.services.bank_detection_service import BankDetectionService
 from walletmind.services.statement_classifier import (
     BankDetector,
     FileInspector,
@@ -19,85 +20,69 @@ def _inspect_csv(filename: str, content: str):
     )
 
 
-def test_axis_detection() -> None:
-    detector = BankDetector()
-    inspection = _inspect_csv(
-        "axis_statement.csv",
-        "Tran Date,Particulars,CR/DR,Balance\n2026-01-01,Credit Salary,CR,2000",
+def test_axis_detection_from_filename_hint() -> None:
+    service = BankDetectionService()
+    result = service.detect_bank(filename="Axis_Statement.csv")
+
+    assert result.bank_name == "Axis Bank"
+    assert result.method == "filename"
+
+
+def test_axis_detection_from_csv_header() -> None:
+    service = BankDetectionService()
+    result = service.detect_bank(
+        csv_headers=["Tran Date", "Particulars", "Axis Salary Credit"],
     )
-    decision = detector.detect(inspection)
 
-    assert decision.bank_name == "Axis Bank"
-    assert decision.confidence > 0.2
-    assert "header-keyword" in decision.method or "column-name" in decision.method
+    assert result.bank_name == "Axis Bank"
+    assert result.method == "csv_header"
 
 
-def test_tmb_detection() -> None:
-    detector = BankDetector()
-    inspection = _inspect_csv(
-        "tmb_statement.csv",
-        "Date,Narration,Withdrawal,Deposit\n2026-01-01,ATM,-200,0",
+def test_document_content_wins_over_filename_hint() -> None:
+    service = BankDetectionService()
+    result = service.detect_bank(
+        metadata_text="HDFC Bank Account Statement",
+        filename="axis_statement.csv",
     )
-    decision = detector.detect(inspection)
 
-    assert decision.bank_name == "Tamilnad Mercantile Bank (TMB)"
-    assert decision.confidence > 0.2
+    assert result.bank_name == "HDFC Bank"
+    assert result.method == "metadata"
 
 
-def test_canara_detection() -> None:
-    detector = BankDetector()
-    inspection = _inspect_csv(
-        "canara_statement.csv",
-        "Txn Date,Description,Debit,Credit,Balance\n2026-01-01,UPI,200,0,800",
+def test_unknown_detection_fallback() -> None:
+    service = BankDetectionService()
+    result = service.detect_bank(
+        metadata_text="",
+        header_text="",
+        worksheet_title="",
+        csv_headers=["date", "description", "amount"],
+        filename="statement.csv",
     )
-    decision = detector.detect(inspection)
 
-    assert decision.bank_name == "Canara Bank"
-    assert decision.confidence > 0.2
-
-
-def test_unknown_detection() -> None:
-    detector = BankDetector()
-    inspection = _inspect_csv(
-        "mystery_statement.csv",
-        "A,B,C\n1,2,3",
-    )
-    decision = detector.detect(inspection)
-
-    assert decision.bank_name == "Unknown"
-    assert decision.confidence == 0.0
-    assert decision.unknown_reason is not None
+    assert result.bank_name == "Unknown"
+    assert result.confidence == 0.0
 
 
 def test_parser_resolver() -> None:
     resolver = ParserResolver()
 
-    assert resolver.resolve(bank_name="Axis Bank", detected_file_type="xlsx") == "axis_excel_parser"
-    assert (
-        resolver.resolve(
-            bank_name="Tamilnad Mercantile Bank (TMB)",
-            detected_file_type="csv",
-        )
-        == "tmb_excel_parser"
-    )
-    assert resolver.resolve(bank_name="Canara Bank", detected_file_type="xls") == "canara_excel_parser"
-    assert resolver.resolve(bank_name="Unknown", detected_file_type="xlsx") == "generic_excel_parser"
-    assert resolver.resolve(bank_name="Unknown", detected_file_type="pdf") == "generic_pdf_parser"
-    assert resolver.resolve(bank_name="Unknown", detected_file_type="png") == "ocr_pipeline"
+    assert resolver.resolve(bank_name="Axis Bank", detected_file_type="csv") == "csv_parser"
+    assert resolver.resolve(bank_name="Unknown", detected_file_type="xlsx") == "excel_parser"
+    assert resolver.resolve(bank_name="Unknown", detected_file_type="xls") == "excel_parser"
+    assert resolver.resolve(bank_name="Unknown", detected_file_type="pdf") == "pdf_parser"
+    assert resolver.resolve(bank_name="Unknown", detected_file_type="png") == "ocr_parser"
 
 
-def test_confidence_scoring_higher_for_stronger_matches() -> None:
+def test_detector_uses_filename_when_no_content_signals() -> None:
     detector = BankDetector()
-
-    strong = _inspect_csv(
-        "axis_statement.csv",
-        "Tran Date,Particulars,CR/DR,Balance\n2026-01-01,Credit Salary,CR,2000",
+    inspection = _inspect_csv(
+        "canara_may.xlsx.csv",
+        "col1,col2\n1,2",
     )
-    weak = _inspect_csv("axis_statement.csv", "col1,col2\n1,2")
+    decision = detector.detect(inspection)
 
-    strong_score = detector.detect(strong).confidence
-    weak_score = detector.detect(weak).confidence
-    assert strong_score >= weak_score
+    assert decision.bank_name == "Canara Bank"
+    assert decision.method == "filename"
 
 
 def test_file_inspector_extracts_signals() -> None:
@@ -111,6 +96,7 @@ def test_file_inspector_extracts_signals() -> None:
     assert "tran date" in inspection.header_keywords
     assert "particulars" in inspection.columns
     assert len(inspection.sample_rows) >= 1
+    assert inspection.header_text == ""
 
 
 def test_file_inspector_handles_image_without_tabular_signals() -> None:
@@ -125,6 +111,7 @@ def test_file_inspector_handles_image_without_tabular_signals() -> None:
     assert inspection.header_keywords == tuple()
     assert inspection.columns == tuple()
     assert inspection.sample_rows == tuple()
+    assert inspection.header_text == ""
 
 
 def test_bank_detector_uses_sheet_name_signal() -> None:
@@ -138,9 +125,10 @@ def test_bank_detector_uses_sheet_name_signal() -> None:
         columns=tuple(),
         sample_rows=tuple(),
         metadata_signals=tuple(),
+        header_text="",
     )
 
     decision = detector.detect(inspection)
 
     assert decision.bank_name == "Axis Bank"
-    assert "sheet-name" in decision.method
+    assert decision.method == "worksheet"

@@ -89,7 +89,10 @@ def test_processing_service_status_transitions_and_timestamps(tmp_path) -> None:
     statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
 
     statement_path = tmp_path / "import.csv"
-    statement_path.write_text("date,amount\n2026-01-01,100\n", encoding="utf-8")
+    statement_path.write_text(
+        "Transaction Date,Description,Debit,Credit,Balance\n2026-01-01,Salary,0,100,100\n",
+        encoding="utf-8",
+    )
 
     service.process_statement(
         statement_uuid=statement.uuid,
@@ -102,15 +105,17 @@ def test_processing_service_status_transitions_and_timestamps(tmp_path) -> None:
         persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
 
     assert persisted is not None
-    assert persisted.status == StatementStatus.READY_FOR_PARSING
-    assert persisted.bank_name == "Unknown"
+    assert persisted.status == StatementStatus.READY_FOR_ANALYSIS
+    assert persisted.bank_name is not None
     assert persisted.detected_file_type == "csv"
-    assert persisted.parser_type == "generic_excel_parser"
+    assert persisted.parser_type is not None
     assert persisted.classification_confidence is not None
     assert persisted.classification_method is not None
     assert persisted.classified_at is not None
     assert persisted.processing_started_at is not None
     assert persisted.processing_completed_at is not None
+    assert persisted.parsed_at is not None
+    assert persisted.parsed_transaction_count >= 1
     assert persisted.processing_error is None
 
 
@@ -133,7 +138,7 @@ def test_processing_service_unknown_file_type_sets_unknown_parser(tmp_path) -> N
         persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
 
     assert persisted is not None
-    assert persisted.status == StatementStatus.READY_FOR_PARSING
+    assert persisted.status == StatementStatus.PARSE_FAILED
     assert persisted.detected_file_type == "unknown"
     assert persisted.parser_type == "unknown"
 
@@ -180,6 +185,87 @@ def test_processing_service_sets_failed_status_on_runtime_exception(monkeypatch,
     assert persisted.processing_error is not None
 
 
+def test_processing_service_sets_parse_failed_status_on_parser_exception(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
+
+    def _parse_boom(*, parser_name: str, content: bytes, filename: str, content_type: str | None):
+        raise RuntimeError("parser crashed")
+
+    monkeypatch.setattr(service._parser_factory, "execute", _parse_boom)
+
+    statement_path = tmp_path / "import.csv"
+    statement_path.write_text(
+        "date,description,amount\n2026-01-01,Salary,100\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError):
+        service.process_statement(
+            statement_uuid=statement.uuid,
+            original_filename="import.csv",
+            stored_file_path=str(statement_path),
+            content_type="text/csv",
+        )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.status == StatementStatus.PARSE_FAILED
+    assert persisted.processing_completed_at is not None
+    assert persisted.processing_error is not None
+
+
+def test_processing_service_sets_parse_failed_when_no_transactions_extracted(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="csv")
+
+    def _parse_empty(*, parser_name: str, content: bytes, filename: str, content_type: str | None):
+        from walletmind.schemas.transaction import ParserResultDTO
+
+        return ParserResultDTO(
+            parser_name="generic_csv_parser",
+            rows_scanned=3,
+            rows_skipped=3,
+            transactions=[],
+            errors=[],
+            metadata={},
+        ), type("M", (), {"duration_ms": 1})()
+
+    monkeypatch.setattr(service._parser_factory, "execute", _parse_empty)
+
+    statement_path = tmp_path / "import.csv"
+    statement_path.write_text(
+        "date,description,amount\n2026-01-01,Salary,100\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="import.csv",
+        stored_file_path=str(statement_path),
+        content_type="text/csv",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.status == StatementStatus.PARSE_FAILED
+    assert persisted.parsed_transaction_count == 0
+    assert persisted.failed_transaction_count == 3
+    assert persisted.processing_error is not None
+
+
 def test_processing_service_axis_classification_selects_axis_parser(tmp_path) -> None:
     service, session_factory = _build_processing_service()
     user = _create_user(session_factory)
@@ -203,7 +289,7 @@ def test_processing_service_axis_classification_selects_axis_parser(tmp_path) ->
 
     assert persisted is not None
     assert persisted.bank_name == "Axis Bank"
-    assert persisted.parser_type == "axis_excel_parser"
+    assert persisted.parser_type == "csv_parser"
 
 
 def test_processing_service_tmb_classification_selects_tmb_parser(tmp_path) -> None:
@@ -228,8 +314,8 @@ def test_processing_service_tmb_classification_selects_tmb_parser(tmp_path) -> N
         persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
 
     assert persisted is not None
-    assert persisted.bank_name == "Tamilnad Mercantile Bank (TMB)"
-    assert persisted.parser_type == "tmb_excel_parser"
+    assert persisted.bank_name == "Tamilnad Mercantile Bank"
+    assert persisted.parser_type == "csv_parser"
 
 
 def test_processing_service_canara_classification_selects_canara_parser(tmp_path) -> None:
@@ -255,4 +341,54 @@ def test_processing_service_canara_classification_selects_canara_parser(tmp_path
 
     assert persisted is not None
     assert persisted.bank_name == "Canara Bank"
-    assert persisted.parser_type == "canara_excel_parser"
+    assert persisted.parser_type == "csv_parser"
+
+
+def test_processing_service_excel_file_sets_excel_parser(tmp_path) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="xlsx")
+
+    statement_path = tmp_path / "axis.xlsx"
+    statement_path.write_text(
+        "Tran Date,Particulars,CR/DR,Balance\n2026-01-01,Salary,CR,9000\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="axis_statement.xlsx",
+        stored_file_path=str(statement_path),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.parser_type == "excel_parser"
+
+
+def test_processing_service_pdf_file_sets_pdf_parser(tmp_path) -> None:
+    service, session_factory = _build_processing_service()
+    user = _create_user(session_factory)
+    statement = _create_statement(session_factory, user_id=user.id, file_type="pdf")
+
+    statement_path = tmp_path / "axis.pdf"
+    statement_path.write_text(
+        "Axis Bank Statement\n01/01/2026  Salary  1000.00\n",
+        encoding="utf-8",
+    )
+
+    service.process_statement(
+        statement_uuid=statement.uuid,
+        original_filename="axis_statement.pdf",
+        stored_file_path=str(statement_path),
+        content_type="application/pdf",
+    )
+
+    with session_factory() as session:
+        persisted = session.scalar(select(Statement).where(Statement.uuid == statement.uuid))
+
+    assert persisted is not None
+    assert persisted.parser_type == "pdf_parser"
