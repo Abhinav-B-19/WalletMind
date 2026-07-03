@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile, status
 
 from backend.app.api.dependencies import (
+    get_financial_health_service,
     get_processing_dispatcher,
     get_spending_insights_service,
     get_statement_upload_service,
@@ -18,6 +19,10 @@ from backend.app.schemas.response import ApiResponse, DeleteStatusData
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsResult,
     SpendingInsightsService,
+)
+from backend.app.services.health.financial_health_service import (
+    FinancialHealthScoreResult,
+    FinancialHealthService,
 )
 from walletmind.schemas.statement import UploadResponseDTO
 from walletmind.schemas.transaction import TransactionDTO
@@ -183,5 +188,28 @@ def get_statement_insights(
     result = service.generate_statement_insights(statement_uuid=statement_uuid)
     return ApiResponse(
         message="Statement insights generated successfully.",
+        data=result,
+    )
+
+
+@router.get(
+    "/{statement_uuid}/health-score",
+    response_model=ApiResponse[FinancialHealthScoreResult],
+    status_code=status.HTTP_200_OK,
+    responses=error_responses,
+)
+def get_statement_health_score(
+    statement_uuid: UUID,
+    *,
+    service: Annotated[
+        FinancialHealthService,
+        Depends(get_financial_health_service),
+    ],
+) -> ApiResponse[FinancialHealthScoreResult]:
+    """Generate deterministic financial health score with AI explanation."""
+
+    result = service.generate_statement_health_score(statement_uuid=statement_uuid)
+    return ApiResponse(
+        message="Statement health score generated successfully.",
         data=result,
     )
