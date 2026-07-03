@@ -13,6 +13,7 @@ from backend.app.services.analysis.spending_summary_builder import (
     SpendingSummary,
     SpendingSummaryBuilder,
 )
+from backend.app.services.budget.category_utils import is_expense_category
 from backend.app.services.health.health_score_calculator import HealthScoreComputation
 from walletmind.schemas.transaction import TransactionDTO
 
@@ -76,6 +77,8 @@ class BudgetCalculator:
 
         category_monthly: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
         for category, amount in summary.category_totals.items():
+            if not is_expense_category(category):
+                continue
             category_monthly[category] = amount / Decimal(month_count)
 
         budget_plan: dict[str, CategoryBudget] = {}

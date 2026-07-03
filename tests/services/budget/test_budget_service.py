@@ -338,3 +338,48 @@ def test_budget_service_generate_ai_failure_uses_fallback() -> None:
 
     assert "AI explanation was unavailable" in result.ai_summary
     assert len(result.ai_recommendations) == 3
+
+
+def test_budget_service_excludes_income_categories_from_outputs() -> None:
+    transactions = [
+        _tx(
+            tx_date=date(2026, 1, 1),
+            amount="12000.00",
+            tx_type="credit",
+            category="Income",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 2),
+            amount="-12000.00",
+            tx_type="debit",
+            category="Salary",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 4),
+            amount="-2500.00",
+            tx_type="debit",
+            category="Shopping",
+        ),
+    ]
+
+    service = BudgetService(
+        transaction_service=StubTransactionService(transactions),
+        ai_service=StubAIService(
+            AIResponse(
+                text=(
+                    '{"summary":"Prioritize shopping reductions.",' 
+                    '"recommendations":["Set shopping cap","Review weekly","Auto-transfer savings"]}'
+                ),
+                model="gemini-2.5-flash",
+                prompt_tokens=10,
+                completion_tokens=12,
+                total_tokens=22,
+                finish_reason="stop",
+            )
+        ),
+    )
+
+    result = service.generate_statement_budget_recommendations(statement_uuid=uuid4())
+
+    assert "Salary" not in result.monthly_budget
+    assert all(item.category != "Salary" for item in result.priority_recommendations)

@@ -232,3 +232,40 @@ def test_large_statement_budget() -> None:
 
     assert len(result.monthly_budget) >= 2
     assert result.overall_potential_savings >= 0
+
+
+def test_budget_excludes_income_categories_from_budget_outputs() -> None:
+    transactions = [
+        _tx(
+            tx_date=date(2026, 1, 1),
+            amount="12000.00",
+            tx_type="credit",
+            category="Income",
+            merchant="Employer",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 3),
+            amount="-12000.00",
+            tx_type="debit",
+            category="Salary",
+            merchant="Payroll Adjustment",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 8),
+            amount="-1800.00",
+            tx_type="debit",
+            category="Food",
+            merchant="Grocer",
+        ),
+    ]
+
+    result = BudgetCalculator().calculate(
+        statement_uuid=uuid4(),
+        transactions=transactions,
+        health=_health(transactions),
+    )
+
+    assert "Salary" not in result.monthly_budget
+    assert "Food" in result.monthly_budget
+    assert "Salary" not in result.overspending_categories
+    assert all(item["category"] != "Salary" for item in result.category_analysis)

@@ -10,6 +10,7 @@ from backend.app.services.budget.budget_service import (
     BudgetRecommendationResult,
     BudgetService,
 )
+from backend.app.services.budget.category_utils import is_expense_category
 from backend.app.services.budget.recommendation_prioritizer import (
     PriorityRecommendation,
     RecommendationPrioritizer,
@@ -22,6 +23,7 @@ __all__ = [
     "BudgetRecommendationResult",
     "BudgetService",
     "CategoryBudget",
+    "is_expense_category",
     "PriorityRecommendation",
     "RecommendationPrioritizer",
 ]

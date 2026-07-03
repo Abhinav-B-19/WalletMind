@@ -98,6 +98,16 @@ vi.mock("@/features/ai-dashboard/hooks", () => ({
   }),
 }));
 
+vi.mock("@/features/assistant/hooks/use-assistant-chat", () => ({
+  useAssistantChat: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: vi.fn(),
+  }),
+}));
+
 vi.mock("@/context/global-loader-context", () => ({
   useGlobalLoader: () => ({
     showLoader: () => undefined,
@@ -238,6 +248,35 @@ describe("routing", () => {
     expect(
       await screen.findByRole("heading", {
         name: "Budget Recommendations",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("assistant page loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/chat?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "AI Financial Assistant",
         level: 2,
       }),
     ).toBeInTheDocument();

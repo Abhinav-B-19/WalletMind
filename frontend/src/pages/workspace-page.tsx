@@ -37,7 +37,14 @@ const QUICK_ACTIONS = [
     href: "/app/statements",
     comingSoon: false,
   },
-  { title: "AI Analysis", icon: Sparkles, href: "/app/chat", comingSoon: true },
+  {
+    title: "AI Analysis",
+    description:
+      "Ask grounded conversational questions about your selected statement.",
+    icon: Sparkles,
+    href: "/app/chat",
+    comingSoon: false,
+  },
   { title: "Planner", icon: Target, href: "/app/planner", comingSoon: true },
 ];
 
