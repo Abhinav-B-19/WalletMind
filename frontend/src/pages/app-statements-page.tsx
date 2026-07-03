@@ -5,6 +5,7 @@ import {
   Filter,
   Image,
   Search,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -623,6 +624,21 @@ export function AppStatementsPage() {
                               >
                                 View Details
                               </Button>
+                              {statement.parsed_transaction_count > 0 ? (
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  variant="secondary"
+                                  type="button"
+                                >
+                                  <Link
+                                    to={`/app/dashboard?statement_id=${statement.statement_uuid}`}
+                                  >
+                                    <Sparkles className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                                    Open Dashboard
+                                  </Link>
+                                </Button>
+                              ) : null}
                               <Button
                                 size="sm"
                                 variant="secondary"
@@ -697,6 +713,22 @@ export function AppStatementsPage() {
                       >
                         View Details
                       </Button>
+                      {statement.parsed_transaction_count > 0 ? (
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          className="flex-1"
+                        >
+                          <Link
+                            to={`/app/dashboard?statement_id=${statement.statement_uuid}`}
+                          >
+                            <Sparkles className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                            Dashboard
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button
                         size="sm"
                         variant="secondary"

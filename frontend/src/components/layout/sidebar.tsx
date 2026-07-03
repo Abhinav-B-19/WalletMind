@@ -25,9 +25,9 @@ const links = [
   },
   {
     to: "/app/dashboard",
-    label: "Budgets",
+    label: "AI Dashboard",
     icon: CircleDollarSign,
-    comingSoon: true,
+    comingSoon: false,
   },
   { to: "/app/planner", label: "Planner", icon: Timer, comingSoon: true },
   { to: "/app/chat", label: "AI Assistant", icon: Bot, comingSoon: true },
