@@ -10,6 +10,7 @@ from backend.app.services.ai.exceptions import (
 from backend.app.services.ai.gemini_client import GeminiClient
 from backend.app.services.ai.models import AIHealthStatus, AIRequest, AIResponse
 from backend.app.services.ai.prompt_builder import PromptBuilder
+from backend.app.services.ai.structured_output import parse_json_response
 
 __all__ = [
     "AIConfigurationError",
@@ -21,5 +22,6 @@ __all__ = [
     "AIService",
     "AIServiceError",
     "GeminiClient",
+    "parse_json_response",
     "PromptBuilder",
 ]

@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AIDashboardPage } from "@/features/ai-dashboard/pages/ai-dashboard-page";
+import { ApiClientError } from "@/lib/api/client";
 import {
   useAIHealth,
   useBudgetRecommendations,
@@ -249,5 +250,59 @@ describe("AIDashboardPage", () => {
     expect(
       screen.getByRole("link", { name: "Upload Statement" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows AI unavailable card for AI-specific dashboard errors", () => {
+    vi.mocked(useInsights).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: undefined,
+      error: new ApiClientError("AI rate limit", { code: "AI_RATE_LIMIT" }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useInsights>);
+
+    vi.mocked(useBudgetRecommendations).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: {
+        monthly_budget: {},
+        overall_potential_savings: 1200,
+        priority_recommendations: [],
+        ai_summary: "hidden due to AI error",
+        ai_recommendations: [],
+      },
+      error: new ApiClientError("AI timeout", { code: "AI_TIMEOUT" }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useBudgetRecommendations>);
+
+    vi.mocked(useMonthlyReport).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: {
+        executive_summary: "AI narrative",
+        financial_health: {},
+        income_summary: { total_income: 5000 },
+        expense_summary: { total_expenses: 3200 },
+        cash_flow: { net_cash_flow: 1800 },
+        spending_insights: {},
+        budget_recommendations: {},
+        health_score: { grade: "B" },
+        strengths: [],
+        risks: ["r1"],
+        action_plan: ["a1"],
+      },
+      error: new ApiClientError("AI service error", {
+        code: "AI_SERVICE_ERROR",
+      }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useMonthlyReport>);
+
+    render(<AIDashboardPage />, { wrapper: createWrapper() });
+
+    expect(
+      screen.getAllByText("AI insights temporarily unavailable").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("Potential Monthly Savings")).toBeInTheDocument();
+    expect(screen.getByText("Health Grade")).toBeInTheDocument();
   });
 });

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FinancialHealthPage } from "@/features/ai-dashboard/pages/financial-health-page";
 import { useHealthScore } from "@/features/ai-dashboard/hooks";
+import { ApiClientError } from "@/lib/api/client";
 
 vi.mock("@/features/ai-dashboard/hooks", () => ({
   useHealthScore: vi.fn(),
@@ -106,6 +107,40 @@ describe("FinancialHealthPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Service unavailable")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("shows AI unavailable card while preserving deterministic health data", () => {
+    vi.mocked(useHealthScore).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: {
+        overall_score: 82,
+        grade: "B",
+        components: {
+          savings_rate: 80,
+          income_stability: 76,
+          spending_discipline: 71,
+          recurring_obligations: 66,
+          cash_flow: 84,
+        },
+        strengths: ["Stable positive cash flow"],
+        weaknesses: ["Recurring obligations are elevated"],
+        ai_explanation: "AI text",
+        recommendations: ["AI recommendation"],
+      },
+      error: new ApiClientError("AI response invalid", {
+        code: "AI_RESPONSE_INVALID",
+      }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useHealthScore>);
+
+    render(<FinancialHealthPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Grade B")).toBeInTheDocument();
+    expect(screen.getByText("Component Breakdown")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("AI insights temporarily unavailable").length,
+    ).toBeGreaterThan(0);
   });
 
   it("renders empty state when statement id is missing", () => {

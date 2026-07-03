@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from backend.app.services.ai.exceptions import AIResponseError, AIServiceError
+from backend.app.services.ai.exceptions import AIServiceError
 from backend.app.services.ai.models import AIResponse
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsService,
@@ -106,10 +106,14 @@ def test_generate_statement_insights_success() -> None:
     assert result.insights.summary == "Stable month"
     assert result.insights.recommendations[0].priority == "medium"
     assert result.total_tokens == 150
+    assert service._ai_service.last_payload is not None
+    assert service._ai_service.last_payload["response_mime_type"] == "application/json"
+    assert service._ai_service.last_payload["response_schema"]["type"] == "object"
+    assert service._ai_service.last_payload["max_output_tokens"] == 900
 
 
 
-def test_parse_invalid_json_response_raises() -> None:
+def test_parse_invalid_json_response_uses_fallback() -> None:
     statement_uuid = uuid4()
     transactions = [_tx("1000.00", "credit", "Income", "Employer")]
     ai_response = AIResponse(
@@ -125,8 +129,11 @@ def test_parse_invalid_json_response_raises() -> None:
         ai_service=StubAIService(ai_response),
     )
 
-    with pytest.raises(AIResponseError, match="valid JSON"):
-        service.generate_statement_insights(statement_uuid=statement_uuid)
+    result = service.generate_statement_insights(statement_uuid=statement_uuid)
+
+    assert result.model == "deterministic-fallback"
+    assert result.finish_reason == "fallback"
+    assert "AI narrative was unavailable" in result.insights.summary
 
 
 
@@ -172,7 +179,7 @@ def test_statement_not_found_bubbles() -> None:
 
 
 
-def test_gemini_timeout_bubbles() -> None:
+def test_gemini_timeout_uses_fallback() -> None:
     service = SpendingInsightsService(
         transaction_service=StubTransactionService(
             [_tx("1000.00", "credit", "Income", "Employer")]
@@ -180,5 +187,7 @@ def test_gemini_timeout_bubbles() -> None:
         ai_service=StubAIService(AIServiceError("Gemini request timed out.")),
     )
 
-    with pytest.raises(AIServiceError, match="timed out"):
-        service.generate_statement_insights(statement_uuid=uuid4())
+    result = service.generate_statement_insights(statement_uuid=uuid4())
+
+    assert result.model == "deterministic-fallback"
+    assert result.finish_reason == "fallback"

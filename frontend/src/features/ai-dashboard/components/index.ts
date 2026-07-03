@@ -1,4 +1,5 @@
 export { AIHeroCard } from "@/features/ai-dashboard/components/ai-hero-card";
+export { AIUnavailableCard } from "@/features/ai-dashboard/components/ai-unavailable-card";
 export { EmptyStateCard } from "@/features/ai-dashboard/components/empty-state-card";
 export { ErrorCard } from "@/features/ai-dashboard/components/error-card";
 export {

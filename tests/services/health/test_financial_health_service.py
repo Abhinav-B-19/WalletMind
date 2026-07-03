@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from backend.app.services.ai.exceptions import AIServiceError
 from backend.app.services.ai.models import AIResponse
 from backend.app.services.health.financial_health_service import FinancialHealthService
 from walletmind.exceptions import NoTransactionsForStatementError
@@ -21,12 +22,16 @@ class StubTransactionService:
 
 
 class StubAIService:
-    def __init__(self, response: AIResponse) -> None:
+    def __init__(self, response: AIResponse | Exception) -> None:
         self._response = response
         self.calls = 0
+        self.last_kwargs = None
 
     def generate(self, **kwargs):
         self.calls += 1
+        self.last_kwargs = kwargs
+        if isinstance(self._response, Exception):
+            raise self._response
         return self._response
 
 
@@ -95,6 +100,10 @@ def test_generate_health_score_success_with_mocked_ai() -> None:
     assert result.ai_explanation.startswith("Your score is")
     assert result.recommendations == ["Reduce recurring bills"]
     assert ai_service.calls == 1
+    assert ai_service.last_kwargs is not None
+    assert ai_service.last_kwargs["response_mime_type"] == "application/json"
+    assert ai_service.last_kwargs["response_schema"]["type"] == "object"
+    assert ai_service.last_kwargs["max_output_tokens"] == 900
 
 
 def test_empty_statement_raises() -> None:
@@ -174,3 +183,44 @@ def test_expense_only_statement() -> None:
 
     assert result.components.savings_rate == 0
     assert result.components.income_stability == 0
+
+
+def test_invalid_ai_payload_uses_fallback() -> None:
+    transactions = [
+        _tx(amount="5000.00", tx_type="credit", tx_date=date(2026, 1, 1)),
+        _tx(amount="-1800.00", tx_type="debit", tx_date=date(2026, 1, 10)),
+    ]
+    service = FinancialHealthService(
+        transaction_service=StubTransactionService(transactions),
+        ai_service=StubAIService(
+            AIResponse(
+                text="not-json",
+                model="gemini-2.5-flash",
+                prompt_tokens=10,
+                completion_tokens=20,
+                total_tokens=30,
+                finish_reason="stop",
+            )
+        ),
+    )
+
+    result = service.generate_statement_health_score(statement_uuid=uuid4())
+
+    assert "AI explanation was unavailable" in result.ai_explanation
+    assert len(result.recommendations) >= 1
+
+
+def test_ai_service_failure_uses_fallback() -> None:
+    transactions = [
+        _tx(amount="5000.00", tx_type="credit", tx_date=date(2026, 1, 1)),
+        _tx(amount="-1800.00", tx_type="debit", tx_date=date(2026, 1, 10)),
+    ]
+    service = FinancialHealthService(
+        transaction_service=StubTransactionService(transactions),
+        ai_service=StubAIService(AIServiceError("Gemini request timed out.")),
+    )
+
+    result = service.generate_statement_health_score(statement_uuid=uuid4())
+
+    assert "AI explanation was unavailable" in result.ai_explanation
+    assert len(result.recommendations) >= 1

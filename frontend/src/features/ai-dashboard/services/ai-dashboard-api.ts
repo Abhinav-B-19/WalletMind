@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiClient } from "@/lib/api/client";
+import { ApiClientError, apiClient } from "@/lib/api/client";
 import { listStatements, type UploadedStatement } from "@/lib/api/statements";
 import type {
   AIServiceHealth,
@@ -44,7 +44,74 @@ const healthScoreSchema = z.object({
 
 const insightsSchema = z.object({
   statement_uuid: z.string().uuid(),
-  deterministic_summary: z.record(z.string(), z.unknown()),
+  deterministic_summary: z.object({
+    statement_uuid: z.string().uuid(),
+    transaction_count: z.number().int().nonnegative(),
+    credit_count: z.number().int().nonnegative(),
+    debit_count: z.number().int().nonnegative(),
+    cash_flow: z.object({
+      total_income: numberLikeSchema,
+      total_expenses: numberLikeSchema,
+      net_cash_flow: numberLikeSchema,
+      savings_rate: numberLikeSchema,
+    }),
+    category_breakdown: z.record(z.string(), numberLikeSchema),
+    top_spending_categories: z
+      .array(
+        z.object({
+          category: z.string().min(1),
+          amount: numberLikeSchema,
+        }),
+      )
+      .default([]),
+    top_merchants: z
+      .array(
+        z.object({
+          merchant: z.string().min(1),
+          amount: numberLikeSchema,
+        }),
+      )
+      .default([]),
+    largest_expense: z
+      .object({
+        date: z.string().min(1),
+        amount: numberLikeSchema,
+        category: z.string().nullable(),
+        merchant: z.string().min(1),
+      })
+      .nullable(),
+    largest_income: z
+      .object({
+        date: z.string().min(1),
+        amount: numberLikeSchema,
+        category: z.string().nullable(),
+        merchant: z.string().min(1),
+      })
+      .nullable(),
+    monthly_averages: z.object({
+      income: numberLikeSchema,
+      expenses: numberLikeSchema,
+      net: numberLikeSchema,
+    }),
+    monthly_trend: z
+      .array(
+        z.object({
+          month: z.string().min(1),
+          income: numberLikeSchema,
+          expenses: numberLikeSchema,
+          net: numberLikeSchema,
+        }),
+      )
+      .default([]),
+    recurring_subscriptions: z
+      .array(
+        z.object({
+          merchant: z.string().min(1),
+          amount: numberLikeSchema,
+        }),
+      )
+      .default([]),
+  }),
   insights: z.object({
     summary: z.string().min(1),
     strengths: z.array(z.string()).default([]),
@@ -132,6 +199,10 @@ const aiHealthSchema = z.object({
 function toApiError(error: unknown, fallbackMessage: string): Error {
   if (error instanceof z.ZodError) {
     return new Error("Unexpected dashboard response format from backend.");
+  }
+
+  if (error instanceof ApiClientError) {
+    return error;
   }
 
   if (error instanceof Error) {

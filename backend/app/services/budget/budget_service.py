@@ -11,7 +11,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.services.ai.ai_service import AIService
-from backend.app.services.ai.exceptions import AIResponseError
+from backend.app.services.ai.exceptions import AIResponseError, AIServiceError
+from backend.app.services.ai.structured_output import parse_json_response
 from backend.app.services.analysis.spending_summary_builder import (
     SpendingSummaryBuilder,
 )
@@ -148,22 +149,47 @@ class BudgetService:
         )
 
         ai_started = time.perf_counter()
-        ai_response = self._ai_service.generate(
-            system_instruction=self._SYSTEM_INSTRUCTION,
-            user_input=ai_prompt,
-            response_mime_type="application/json",
-            response_schema=self._RESPONSE_SCHEMA,
-            max_output_tokens=220,
-        )
+        model = "deterministic-fallback"
+        finish_reason = "fallback"
+        prompt_tokens = 0
+        completion_tokens = 0
+        total_tokens = 0
+
+        try:
+            ai_response = self._ai_service.generate(
+                system_instruction=self._SYSTEM_INSTRUCTION,
+                user_input=ai_prompt,
+                response_mime_type="application/json",
+                response_schema=self._RESPONSE_SCHEMA,
+                max_output_tokens=900,
+            )
+
+            ai_parsed = self._parse_ai_response(
+                raw_text=ai_response.text,
+                finish_reason=ai_response.finish_reason,
+                prompt_tokens=ai_response.prompt_tokens,
+                completion_tokens=ai_response.completion_tokens,
+                total_tokens=ai_response.total_tokens,
+            )
+            model = ai_response.model
+            finish_reason = ai_response.finish_reason
+            prompt_tokens = ai_response.prompt_tokens
+            completion_tokens = ai_response.completion_tokens
+            total_tokens = ai_response.total_tokens
+        except (AIResponseError, AIServiceError) as exc:
+            self._logger.warning(
+                "Budget AI explanation unavailable; using deterministic fallback.",
+                extra={
+                    "statement_uuid": str(statement_uuid),
+                    "error": str(exc),
+                },
+            )
+            ai_parsed = self._fallback_ai_explanation(
+                prioritized=prioritized,
+                overall_potential_savings=budget.overall_potential_savings,
+            )
 
         ai_elapsed_ms = int((time.perf_counter() - ai_started) * 1000)
-        ai_parsed = self._parse_ai_response(
-            raw_text=ai_response.text,
-            finish_reason=ai_response.finish_reason,
-            prompt_tokens=ai_response.prompt_tokens,
-            completion_tokens=ai_response.completion_tokens,
-            total_tokens=ai_response.total_tokens,
-        )
 
         total_execution_ms = int((time.perf_counter() - started_at) * 1000)
         self._logger.info(
@@ -175,11 +201,11 @@ class BudgetService:
                 "budget_categories_generated": len(budget.monthly_budget),
                 "ai_execution_ms": ai_elapsed_ms,
                 "execution_ms": total_execution_ms,
-                "model": ai_response.model,
-                "finish_reason": ai_response.finish_reason,
-                "prompt_tokens": ai_response.prompt_tokens,
-                "completion_tokens": ai_response.completion_tokens,
-                "total_tokens": ai_response.total_tokens,
+                "model": model,
+                "finish_reason": finish_reason,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
                 "prompt_characters": len(ai_prompt),
             },
         )
@@ -243,15 +269,13 @@ class BudgetService:
         completion_tokens: int,
         total_tokens: int,
     ) -> BudgetAIExplanation:
-        candidate = raw_text.strip()
-        if not candidate:
-            raise AIResponseError("Budget AI response was empty.")
-
-        candidate = self._unwrap_json_fence(candidate)
-
         try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError as exc:
+            parsed = parse_json_response(
+                raw_text=raw_text,
+                empty_error_message="Budget AI response was empty.",
+                invalid_json_error_message="Budget AI response is not valid JSON.",
+            )
+        except AIResponseError as exc:
             self._logger.error(
                 "Budget AI JSON decode failed.",
                 extra={
@@ -263,9 +287,7 @@ class BudgetService:
                     "total_tokens": total_tokens,
                 },
             )
-            raise AIResponseError(
-                f"Budget AI response is not valid JSON: {exc.msg}."
-            ) from exc
+            raise
 
         try:
             return BudgetAIExplanation.model_validate(parsed)
@@ -284,20 +306,20 @@ class BudgetService:
             raise AIResponseError("Budget AI response schema is invalid.") from exc
 
     @staticmethod
-    def _unwrap_json_fence(candidate: str) -> str:
-        stripped = candidate.strip()
-        if not stripped.startswith("```"):
-            return stripped
+    def _fallback_ai_explanation(
+        *,
+        prioritized: list[PriorityRecommendation],
+        overall_potential_savings: float,
+    ) -> BudgetAIExplanation:
+        prioritized_titles = [item.title for item in prioritized[:3]]
+        while len(prioritized_titles) < 3:
+            prioritized_titles.append("Review spending against category limits")
 
-        lines = stripped.splitlines()
-        if len(lines) < 3:
-            return stripped
-
-        opening_fence = lines[0].strip().lower()
-        closing_fence = lines[-1].strip()
-        if closing_fence != "```":
-            return stripped
-        if opening_fence not in {"```", "```json"}:
-            return stripped
-
-        return "\n".join(lines[1:-1]).strip()
+        return BudgetAIExplanation(
+            summary=(
+                "AI explanation was unavailable. Deterministic budget recommendations "
+                "are shown based on observed spending behavior. "
+                f"Potential monthly savings are {overall_potential_savings:.2f}."
+            ),
+            recommendations=prioritized_titles[:3],
+        )

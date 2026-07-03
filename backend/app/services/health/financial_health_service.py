@@ -9,11 +9,16 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from backend.app.services.ai.ai_service import AIService
+from backend.app.services.ai.exceptions import AIResponseError, AIServiceError
 from backend.app.services.health.health_score_calculator import (
+    HealthScoreComputation,
     HealthScoreCalculator,
     HealthScoreComponents,
 )
-from backend.app.services.health.score_explainer import ScoreExplainer
+from backend.app.services.health.score_explainer import (
+    ScoreExplainer,
+    ScoreExplanationPayload,
+)
 from walletmind.exceptions import NoTransactionsForStatementError
 from walletmind.services.transaction_service import TransactionService
 
@@ -71,11 +76,28 @@ class FinancialHealthService:
         )
 
         user_prompt = self._explainer.build_user_prompt(computation=computation)
-        ai_response = self._ai_service.generate(
-            system_instruction=self._explainer.system_instruction,
-            user_input=user_prompt,
-        )
-        explanation = self._explainer.parse_ai_response(ai_response.text)
+        try:
+            ai_response = self._ai_service.generate(
+                system_instruction=self._explainer.system_instruction,
+                user_input=user_prompt,
+                response_mime_type="application/json",
+                response_schema=self._explainer.response_schema,
+                max_output_tokens=900,
+            )
+            explanation = self._explainer.parse_ai_response(ai_response.text)
+            model = ai_response.model
+            total_tokens = ai_response.total_tokens
+        except (AIResponseError, AIServiceError) as exc:
+            self._logger.warning(
+                "Health score AI explanation unavailable; using deterministic fallback.",
+                extra={
+                    "statement_uuid": str(statement_uuid),
+                    "error": str(exc),
+                },
+            )
+            explanation = self._fallback_explanation(computation=computation)
+            model = "deterministic-fallback"
+            total_tokens = 0
 
         execution_ms = int((time.perf_counter() - started_at) * 1000)
         self._logger.info(
@@ -85,8 +107,8 @@ class FinancialHealthService:
                 "overall_score": computation.overall_score,
                 "grade": computation.grade,
                 "execution_ms": execution_ms,
-                "model": ai_response.model,
-                "total_tokens": ai_response.total_tokens,
+                "model": model,
+                "total_tokens": total_tokens,
             },
         )
 
@@ -98,4 +120,20 @@ class FinancialHealthService:
             weaknesses=computation.weaknesses,
             ai_explanation=explanation.explanation,
             recommendations=explanation.recommendations,
+        )
+
+    @staticmethod
+    def _fallback_explanation(
+        *,
+        computation: HealthScoreComputation,
+    ) -> ScoreExplanationPayload:
+        return ScoreExplanationPayload(
+            explanation=(
+                "AI explanation was unavailable. Deterministic health metrics are shown. "
+                f"Your current score is {computation.overall_score} ({computation.grade})."
+            ),
+            recommendations=[
+                "Review top expense categories weekly and set category caps.",
+                "Maintain a positive monthly cash flow and improve savings consistency.",
+            ],
         )

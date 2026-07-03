@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.services.ai.exceptions import AIResponseError
+from backend.app.services.ai.structured_output import parse_json_response
 from backend.app.services.health.health_score_calculator import HealthScoreComputation
 
 
@@ -21,6 +21,19 @@ class ScoreExplanationPayload(BaseModel):
 class ScoreExplainer:
     """Build score explanation prompts and parse AI responses."""
 
+    _RESPONSE_SCHEMA = {
+        "type": "object",
+        "required": ["explanation", "recommendations"],
+        "properties": {
+            "explanation": {"type": "string", "minLength": 1},
+            "recommendations": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+        "additionalProperties": False,
+    }
+
     _SYSTEM_INSTRUCTION = (
         "You are WalletMind Financial Health Coach. "
         "Use only deterministic score and metric data provided. "
@@ -32,6 +45,10 @@ class ScoreExplainer:
     @property
     def system_instruction(self) -> str:
         return self._SYSTEM_INSTRUCTION
+
+    @property
+    def response_schema(self) -> dict[str, object]:
+        return self._RESPONSE_SCHEMA
 
     def build_user_prompt(self, *, computation: HealthScoreComputation) -> str:
         """Build structured prompt payload from deterministic score output."""
@@ -55,19 +72,11 @@ class ScoreExplainer:
 
     def parse_ai_response(self, raw_text: str) -> ScoreExplanationPayload:
         """Parse and validate AI JSON explanation payload."""
-
-        candidate = raw_text.strip()
-        if not candidate:
-            raise AIResponseError("AI explanation response was empty.")
-
-        match = re.search(r"```json\s*(\{.*?\})\s*```", candidate, re.DOTALL)
-        if match:
-            candidate = match.group(1)
-
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError as exc:
-            raise AIResponseError("AI explanation response is not valid JSON.") from exc
+        parsed = parse_json_response(
+            raw_text=raw_text,
+            empty_error_message="AI explanation response was empty.",
+            invalid_json_error_message="AI explanation response is not valid JSON.",
+        )
 
         try:
             return ScoreExplanationPayload.model_validate(parsed)

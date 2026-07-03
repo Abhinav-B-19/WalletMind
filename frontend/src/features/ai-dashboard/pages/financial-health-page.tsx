@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/section-title";
+import { AIUnavailableCard } from "@/features/ai-dashboard/components/ai-unavailable-card";
 import {
   HealthMetricCard,
   LegendCard,
@@ -19,6 +20,7 @@ import { HealthScoreGauge } from "@/features/ai-dashboard/components/health-scor
 import { LoadingCard } from "@/features/ai-dashboard/components/loading-card";
 import { SectionCard } from "@/features/ai-dashboard/components/section-card";
 import { useHealthScore } from "@/features/ai-dashboard/hooks";
+import { isAIUnavailableError } from "@/features/ai-dashboard/services/ai-degradation";
 
 const metricDescriptions: Record<string, string> = {
   savings_rate: "How consistently you retain income after expenses.",
@@ -43,6 +45,8 @@ export function FinancialHealthPage() {
   const statementUuid = searchParams.get("statement_id");
 
   const healthQuery = useHealthScore(statementUuid);
+  const healthAIUnavailable =
+    healthQuery.isError && isAIUnavailableError(healthQuery.error);
   const generatedAt = useMemo(() => {
     if (!healthQuery.data) {
       return null;
@@ -136,7 +140,7 @@ export function FinancialHealthPage() {
     );
   }
 
-  if (healthQuery.isError) {
+  if (healthQuery.isError && !healthQuery.data) {
     return (
       <div className="space-y-6" aria-label="Financial health page error">
         <PageTitle
@@ -195,9 +199,13 @@ export function FinancialHealthPage() {
           </div>
 
           <div className="space-y-4">
-            <p className="text-base text-[var(--text-muted)]">
-              {healthQuery.data.ai_explanation}
-            </p>
+            {healthAIUnavailable ? (
+              <AIUnavailableCard onRetry={() => void healthQuery.refetch()} />
+            ) : (
+              <p className="text-base text-[var(--text-muted)]">
+                {healthQuery.data.ai_explanation}
+              </p>
+            )}
             <div className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-xs text-[var(--text-muted)]">
               <CalendarClock className="h-[var(--icon-sm)] w-[var(--icon-sm)]" />
               Last generated: {generatedAt}
@@ -266,21 +274,27 @@ export function FinancialHealthPage() {
         title="Recommendations"
         description="AI-guided actions to improve your financial health over time."
       >
-        <div className="grid gap-3">
-          {healthQuery.data.recommendations.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              No recommendations are currently available.
-            </p>
-          ) : (
-            healthQuery.data.recommendations.map((recommendation, index) => (
-              <RecommendationCard
-                key={recommendation}
-                recommendation={recommendation}
-                priority={index === 0 ? "high" : index === 1 ? "medium" : "low"}
-              />
-            ))
-          )}
-        </div>
+        {healthAIUnavailable ? (
+          <AIUnavailableCard onRetry={() => void healthQuery.refetch()} />
+        ) : (
+          <div className="grid gap-3">
+            {healthQuery.data.recommendations.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                No recommendations are currently available.
+              </p>
+            ) : (
+              healthQuery.data.recommendations.map((recommendation, index) => (
+                <RecommendationCard
+                  key={recommendation}
+                  recommendation={recommendation}
+                  priority={
+                    index === 0 ? "high" : index === 1 ? "medium" : "low"
+                  }
+                />
+              ))
+            )}
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard

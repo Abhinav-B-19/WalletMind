@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/select";
 import { PageTitle } from "@/components/ui/section-title";
 import { getStoredUser } from "@/lib/auth/storage";
 import { AIHeroCard } from "@/features/ai-dashboard/components/ai-hero-card";
+import { AIUnavailableCard } from "@/features/ai-dashboard/components/ai-unavailable-card";
 import { EmptyStateCard } from "@/features/ai-dashboard/components/empty-state-card";
 import { ErrorCard } from "@/features/ai-dashboard/components/error-card";
 import { InsightCard } from "@/features/ai-dashboard/components/insight-card";
@@ -32,6 +33,7 @@ import {
   useMonthlyReport,
   useProcessedStatements,
 } from "@/features/ai-dashboard/hooks";
+import { isAIUnavailableError } from "@/features/ai-dashboard/services/ai-degradation";
 
 function toStatusLabel(status: string): string {
   return status
@@ -104,6 +106,14 @@ export function AIDashboardPage() {
   const insightsQuery = useInsights(activeStatementUuid);
   const budgetQuery = useBudgetRecommendations(activeStatementUuid);
   const monthlyReportQuery = useMonthlyReport(activeStatementUuid);
+
+  const insightsAIUnavailable =
+    insightsQuery.isError && isAIUnavailableError(insightsQuery.error);
+  const budgetAIUnavailable =
+    budgetQuery.isError && isAIUnavailableError(budgetQuery.error);
+  const monthlyReportAIUnavailable =
+    monthlyReportQuery.isError &&
+    isAIUnavailableError(monthlyReportQuery.error);
 
   const currencyCode = user?.currency || "USD";
 
@@ -324,14 +334,22 @@ export function AIDashboardPage() {
           description="Top spending insights generated for this statement."
           action={
             <Button asChild variant="secondary" size="sm">
-              <Link to="/app/chat">View More</Link>
+              <Link
+                to={
+                  selectedStatementUuid
+                    ? `/app/insights?statement_id=${selectedStatementUuid}`
+                    : "/app/insights"
+                }
+              >
+                View More
+              </Link>
             </Button>
           }
         >
           {insightsQuery.isLoading ? (
             <LoadingCard ariaLabel="Loading AI insights" lines={4} compact />
           ) : null}
-          {insightsQuery.isError ? (
+          {insightsQuery.isError && !insightsAIUnavailable ? (
             <ErrorCard
               title="Insights unavailable"
               message={
@@ -342,22 +360,29 @@ export function AIDashboardPage() {
               onRetry={() => void insightsQuery.refetch()}
             />
           ) : null}
+          {insightsAIUnavailable ? (
+            <AIUnavailableCard onRetry={() => void insightsQuery.refetch()} />
+          ) : null}
           {insightsQuery.data ? (
             <>
-              <p className="text-sm text-[var(--text-muted)]">
-                {insightsQuery.data.insights.summary}
-              </p>
+              {!insightsAIUnavailable ? (
+                <p className="text-sm text-[var(--text-muted)]">
+                  {insightsQuery.data.insights.summary}
+                </p>
+              ) : null}
               <div className="grid gap-3">
-                {insightsQuery.data.insights.recommendations
-                  .slice(0, 3)
-                  .map((insight) => (
-                    <InsightCard
-                      key={insight.title}
-                      title={insight.title}
-                      description={insight.description}
-                      priority={insight.priority}
-                    />
-                  ))}
+                {!insightsAIUnavailable
+                  ? insightsQuery.data.insights.recommendations
+                      .slice(0, 3)
+                      .map((insight) => (
+                        <InsightCard
+                          key={insight.title}
+                          title={insight.title}
+                          description={insight.description}
+                          priority={insight.priority}
+                        />
+                      ))
+                  : null}
               </div>
             </>
           ) : null}
@@ -379,7 +404,7 @@ export function AIDashboardPage() {
               compact
             />
           ) : null}
-          {budgetQuery.isError ? (
+          {budgetQuery.isError && !budgetAIUnavailable ? (
             <ErrorCard
               title="Budget recommendations unavailable"
               message={
@@ -389,6 +414,9 @@ export function AIDashboardPage() {
               }
               onRetry={() => void budgetQuery.refetch()}
             />
+          ) : null}
+          {budgetAIUnavailable ? (
+            <AIUnavailableCard onRetry={() => void budgetQuery.refetch()} />
           ) : null}
           {budgetQuery.data ? (
             <>
@@ -403,6 +431,11 @@ export function AIDashboardPage() {
                   )}
                 </p>
               </div>
+              {!budgetAIUnavailable ? (
+                <p className="text-sm text-[var(--text-muted)]">
+                  {budgetQuery.data.ai_summary}
+                </p>
+              ) : null}
               {budgetQuery.data.priority_recommendations[0] ? (
                 <RecommendationCard
                   title={budgetQuery.data.priority_recommendations[0].title}
@@ -477,7 +510,7 @@ export function AIDashboardPage() {
           {monthlyReportQuery.isLoading ? (
             <LoadingCard ariaLabel="Loading monthly report" lines={5} compact />
           ) : null}
-          {monthlyReportQuery.isError ? (
+          {monthlyReportQuery.isError && !monthlyReportAIUnavailable ? (
             <ErrorCard
               title="Monthly report unavailable"
               message={
@@ -488,11 +521,18 @@ export function AIDashboardPage() {
               onRetry={() => void monthlyReportQuery.refetch()}
             />
           ) : null}
+          {monthlyReportAIUnavailable ? (
+            <AIUnavailableCard
+              onRetry={() => void monthlyReportQuery.refetch()}
+            />
+          ) : null}
           {monthlyReportQuery.data ? (
             <>
-              <p className="text-sm text-[var(--text-muted)]">
-                {monthlyReportQuery.data.executive_summary}
-              </p>
+              {!monthlyReportAIUnavailable ? (
+                <p className="text-sm text-[var(--text-muted)]">
+                  {monthlyReportQuery.data.executive_summary}
+                </p>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">

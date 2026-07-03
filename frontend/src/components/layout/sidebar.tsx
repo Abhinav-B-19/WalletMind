@@ -6,6 +6,7 @@ import {
   Home,
   LogOut,
   Settings,
+  Sparkles,
   Timer,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -27,6 +28,12 @@ const links = [
     to: "/app/dashboard",
     label: "AI Dashboard",
     icon: CircleDollarSign,
+    comingSoon: false,
+  },
+  {
+    to: "/app/insights",
+    label: "Spending Insights",
+    icon: Sparkles,
     comingSoon: false,
   },
   {

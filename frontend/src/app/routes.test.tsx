@@ -12,6 +12,70 @@ vi.mock("@/features/ai-dashboard/hooks", () => ({
     error: null,
     refetch: vi.fn(),
   }),
+  useProcessedStatements: () => ({
+    isLoading: false,
+    isError: false,
+    data: [
+      {
+        statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        original_filename: "statement.csv",
+      },
+    ],
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useInsights: () => ({
+    isLoading: false,
+    isError: false,
+    dataUpdatedAt: 1762406400000,
+    data: {
+      statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      deterministic_summary: {
+        statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        transaction_count: 1,
+        credit_count: 0,
+        debit_count: 1,
+        cash_flow: {
+          total_income: 0,
+          total_expenses: 100,
+          net_cash_flow: -100,
+          savings_rate: 0,
+        },
+        category_breakdown: { Food: 100 },
+        top_spending_categories: [{ category: "Food", amount: 100 }],
+        top_merchants: [{ merchant: "Cafe", amount: 100 }],
+        largest_expense: {
+          date: "2026-07-01",
+          amount: 100,
+          category: "Food",
+          merchant: "Cafe",
+        },
+        largest_income: null,
+        monthly_averages: {
+          income: 0,
+          expenses: 100,
+          net: -100,
+        },
+        monthly_trend: [
+          { month: "2026-06", income: 0, expenses: 100, net: -100 },
+        ],
+        recurring_subscriptions: [],
+      },
+      insights: {
+        summary: "Summary",
+        strengths: [],
+        concerns: [],
+        recommendations: [],
+      },
+      model: "gemini",
+      prompt_tokens: 1,
+      completion_tokens: 1,
+      total_tokens: 2,
+      finish_reason: "stop",
+    },
+    error: null,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("@/context/global-loader-context", () => ({
@@ -101,6 +165,32 @@ describe("routing", () => {
 
     expect(
       await screen.findByRole("heading", { name: "Financial Health" }),
+    ).toBeInTheDocument();
+  });
+
+  it("insights page loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/insights?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Spending Insights" }),
     ).toBeInTheDocument();
   });
 

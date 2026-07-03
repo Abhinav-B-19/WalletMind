@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from backend.app.services.ai.exceptions import AIResponseError
+from backend.app.services.ai.exceptions import AIResponseError, AIServiceError
 from backend.app.services.ai.models import AIResponse
 from backend.app.services.budget.budget_service import BudgetService
 from walletmind.exceptions import NoTransactionsForStatementError
@@ -22,7 +22,7 @@ class StubTransactionService:
 
 
 class StubAIService:
-    def __init__(self, response: AIResponse) -> None:
+    def __init__(self, response: AIResponse | Exception) -> None:
         self._response = response
         self.calls = 0
         self.last_kwargs = None
@@ -30,6 +30,8 @@ class StubAIService:
     def generate(self, **kwargs):
         self.calls += 1
         self.last_kwargs = kwargs
+        if isinstance(self._response, Exception):
+            raise self._response
         return self._response
 
 
@@ -124,7 +126,7 @@ def test_budget_service_generates_result_with_mocked_ai() -> None:
     assert ai_service.calls == 1
     assert ai_service.last_kwargs["response_mime_type"] == "application/json"
     assert ai_service.last_kwargs["response_schema"]["type"] == "object"
-    assert ai_service.last_kwargs["max_output_tokens"] == 220
+    assert ai_service.last_kwargs["max_output_tokens"] == 900
 
 
 def test_budget_service_empty_statement_raises() -> None:
@@ -273,3 +275,66 @@ def test_budget_service_parse_rejects_non_three_recommendations() -> None:
             completion_tokens=40,
             total_tokens=140,
         )
+
+
+def test_budget_service_generate_invalid_ai_payload_uses_fallback() -> None:
+    transactions = [
+        _tx(
+            tx_date=date(2026, 1, 1),
+            amount="6000.00",
+            tx_type="credit",
+            category="Income",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 3),
+            amount="-2500.00",
+            tx_type="debit",
+            category="Shopping",
+        ),
+    ]
+
+    service = BudgetService(
+        transaction_service=StubTransactionService(transactions),
+        ai_service=StubAIService(
+            AIResponse(
+                text="not-json",
+                model="gemini-2.5-flash",
+                prompt_tokens=10,
+                completion_tokens=12,
+                total_tokens=22,
+                finish_reason="stop",
+            )
+        ),
+    )
+
+    result = service.generate_statement_budget_recommendations(statement_uuid=uuid4())
+
+    assert "AI explanation was unavailable" in result.ai_summary
+    assert len(result.ai_recommendations) == 3
+
+
+def test_budget_service_generate_ai_failure_uses_fallback() -> None:
+    transactions = [
+        _tx(
+            tx_date=date(2026, 1, 1),
+            amount="6000.00",
+            tx_type="credit",
+            category="Income",
+        ),
+        _tx(
+            tx_date=date(2026, 1, 3),
+            amount="-2500.00",
+            tx_type="debit",
+            category="Shopping",
+        ),
+    ]
+
+    service = BudgetService(
+        transaction_service=StubTransactionService(transactions),
+        ai_service=StubAIService(AIServiceError("Gemini request timed out.")),
+    )
+
+    result = service.generate_statement_budget_recommendations(statement_uuid=uuid4())
+
+    assert "AI explanation was unavailable" in result.ai_summary
+    assert len(result.ai_recommendations) == 3

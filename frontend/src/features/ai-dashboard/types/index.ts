@@ -28,9 +28,65 @@ export type InsightRecommendation = {
   priority: PriorityLevel;
 };
 
+export type InsightCategoryBreakdown = Record<string, number>;
+
+export type TopSpendingCategory = {
+  category: string;
+  amount: number;
+};
+
+export type TopMerchant = {
+  merchant: string;
+  amount: number;
+};
+
+export type LargestTransactionSnapshot = {
+  date: string;
+  amount: number;
+  category: string | null;
+  merchant: string;
+};
+
+export type MonthlyTrendPoint = {
+  month: string;
+  income: number;
+  expenses: number;
+  net: number;
+};
+
+export type RecurringSubscription = {
+  merchant: string;
+  amount: number;
+};
+
+export type InsightsDeterministicSummary = {
+  statement_uuid: string;
+  transaction_count: number;
+  credit_count: number;
+  debit_count: number;
+  cash_flow: {
+    total_income: number;
+    total_expenses: number;
+    net_cash_flow: number;
+    savings_rate: number;
+  };
+  category_breakdown: InsightCategoryBreakdown;
+  top_spending_categories: TopSpendingCategory[];
+  top_merchants: TopMerchant[];
+  largest_expense: LargestTransactionSnapshot | null;
+  largest_income: LargestTransactionSnapshot | null;
+  monthly_averages: {
+    income: number;
+    expenses: number;
+    net: number;
+  };
+  monthly_trend: MonthlyTrendPoint[];
+  recurring_subscriptions: RecurringSubscription[];
+};
+
 export type SpendingInsights = {
   statement_uuid: string;
-  deterministic_summary: Record<string, unknown>;
+  deterministic_summary: InsightsDeterministicSummary;
   insights: {
     summary: string;
     strengths: string[];

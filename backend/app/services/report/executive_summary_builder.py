@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.services.ai.ai_service import AIService
 from backend.app.services.ai.exceptions import AIResponseError
+from backend.app.services.ai.structured_output import parse_json_response
 
 
 class ExecutiveSummaryResult(BaseModel):
@@ -149,23 +150,13 @@ class ExecutiveSummaryBuilder:
         total_tokens: int,
         finish_reason: str,
     ) -> ExecutiveSummaryResult:
-        candidate = raw_text.strip()
-        if not candidate:
-            raise AIResponseError(
-                "Monthly report executive summary response was empty."
-            )
-
-        if candidate.startswith("```"):
-            lines = candidate.splitlines()
-            if len(lines) >= 3 and lines[-1].strip() == "```":
-                candidate = "\n".join(lines[1:-1]).strip()
-
-        try:
-            payload = json.loads(candidate)
-        except json.JSONDecodeError as exc:
-            raise AIResponseError(
+        payload = parse_json_response(
+            raw_text=raw_text,
+            empty_error_message="Monthly report executive summary response was empty.",
+            invalid_json_error_message=(
                 "Monthly report executive summary response is not valid JSON."
-            ) from exc
+            ),
+        )
 
         payload["model"] = model
         payload["prompt_tokens"] = prompt_tokens

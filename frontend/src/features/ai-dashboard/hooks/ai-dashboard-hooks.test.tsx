@@ -65,7 +65,37 @@ describe("AI dashboard hooks", () => {
   it("loads insights with React Query", async () => {
     vi.mocked(dashboardApi.getInsights).mockResolvedValue({
       statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
-      deterministic_summary: {},
+      deterministic_summary: {
+        statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+        transaction_count: 1,
+        credit_count: 0,
+        debit_count: 1,
+        cash_flow: {
+          total_income: 0,
+          total_expenses: 100,
+          net_cash_flow: -100,
+          savings_rate: 0,
+        },
+        category_breakdown: { Food: 100 },
+        top_spending_categories: [{ category: "Food", amount: 100 }],
+        top_merchants: [{ merchant: "Cafe", amount: 100 }],
+        largest_expense: {
+          date: "2026-07-01",
+          amount: 100,
+          category: "Food",
+          merchant: "Cafe",
+        },
+        largest_income: null,
+        monthly_averages: {
+          income: 0,
+          expenses: 100,
+          net: -100,
+        },
+        monthly_trend: [
+          { month: "2026-06", income: 0, expenses: 100, net: -100 },
+        ],
+        recurring_subscriptions: [],
+      },
       insights: {
         summary: "Summary",
         strengths: [],
