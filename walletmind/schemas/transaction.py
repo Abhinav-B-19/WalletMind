@@ -27,6 +27,10 @@ class TransactionDTO(BaseModel):
     merchant_name: str | None = None
     bank_gateway: str | None = None
     category: str
+    subcategory: str | None = None
+    payment_channel: str
+    transaction_kind: str
+    confidence_score: int
     raw_description: str
     clean_description: str
     normalized_transaction_type: str
@@ -50,10 +54,23 @@ class TransactionCreateDTO(BaseModel):
     merchant_name: str | None = None
     bank_gateway: str | None = None
     category: str = "Others"
+    subcategory: str | None = None
+    payment_channel: str = "Bank Transfer"
+    transaction_kind: str = "other"
+    confidence_score: int = 0
+    is_transfer: bool = False
     raw_description: str | None = None
     clean_description: str | None = None
     normalized_transaction_type: str = "other"
     is_internal_transfer: bool = False
+    is_subscription: bool = False
+    is_recurring: bool = False
+    is_salary: bool = False
+    is_cash: bool = False
+    is_atm: bool = False
+    is_loan: bool = False
+    is_investment: bool = False
+    is_tax: bool = False
     is_income: bool = False
     is_expense: bool = False
     raw_row_json: dict[str, Any] = Field(default_factory=dict)
@@ -92,6 +109,10 @@ class TransactionReadDTO(BaseModel):
     merchant_name: str | None = None
     bank_gateway: str | None = None
     category: str
+    subcategory: str | None = None
+    payment_channel: str
+    transaction_kind: str
+    confidence_score: int
     raw_description: str
     clean_description: str
     normalized_transaction_type: str

@@ -48,6 +48,21 @@ type FilterOption = (typeof FILTER_OPTIONS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
 type TxTypeFilter = "all" | "income" | "expense" | "internal_transfer";
 
+function txFlagBadges(tx: TransactionRecord): string[] {
+  const flags = tx.flags;
+  if (!flags) {
+    return [];
+  }
+
+  return [
+    flags.is_transfer ? "Transfer" : null,
+    flags.is_subscription ? "Subscription" : null,
+    flags.is_recurring ? "Recurring" : null,
+    flags.is_salary ? "Salary" : null,
+    flags.is_investment ? "Investment" : null,
+  ].filter((value): value is string => value !== null);
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -847,6 +862,7 @@ export function AppStatementsPage() {
                     <th className="px-3 py-2 font-medium">Description</th>
                     <th className="px-3 py-2 font-medium">Category</th>
                     <th className="px-3 py-2 font-medium">Merchant</th>
+                    <th className="px-3 py-2 font-medium">Payment Channel</th>
                     <th className="px-3 py-2 font-medium">Type</th>
                     <th className="px-3 py-2 font-medium">Amount</th>
                     <th className="px-3 py-2 font-medium">Balance</th>
@@ -882,8 +898,23 @@ export function AppStatementsPage() {
                       </td>
                       <td className="px-3 py-2">
                         <Badge variant="muted">
-                          {transaction.normalized_transaction_type}
+                          {transaction.payment_channel}
                         </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="muted">
+                            {transaction.normalized_transaction_type}
+                          </Badge>
+                          {txFlagBadges(transaction).map((flag) => (
+                            <Badge
+                              key={`${transaction.transaction_uuid}-${flag}`}
+                              variant="default"
+                            >
+                              {flag}
+                            </Badge>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         {transaction.amount.toFixed(2)}
@@ -946,7 +977,7 @@ export function AppStatementsPage() {
                 </span>
               </p>
               <p>
-                Description:{" "}
+                Normalized Description:{" "}
                 <span className="text-[var(--text)]">
                   {selectedTransaction.clean_description}
                 </span>
@@ -979,11 +1010,9 @@ export function AppStatementsPage() {
                 </span>
               </p>
               <p>
-                Payment Method:{" "}
+                Payment Channel:{" "}
                 <span className="text-[var(--text)]">
-                  {selectedTransaction.clean_description
-                    .split(" ")[0]
-                    ?.toUpperCase() || "Unknown"}
+                  {selectedTransaction.payment_channel}
                 </span>
               </p>
               <p>
@@ -1001,9 +1030,30 @@ export function AppStatementsPage() {
               <p>
                 Transaction Type:{" "}
                 <span className="text-[var(--text)]">
-                  {selectedTransaction.normalized_transaction_type}
+                  {selectedTransaction.transaction_kind}
                 </span>
               </p>
+              <p>
+                Confidence Score:{" "}
+                <span className="text-[var(--text)]">
+                  {selectedTransaction.confidence_score}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Flags
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(selectedTransaction.flags ?? {})
+                  .filter(([, enabled]) => Boolean(enabled))
+                  .map(([name]) => (
+                    <Badge key={name} variant="default">
+                      {name.replace(/_/g, " ")}
+                    </Badge>
+                  ))}
+              </div>
             </div>
 
             <div className="space-y-1">

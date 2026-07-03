@@ -123,11 +123,24 @@ describe("statements api contract", () => {
             merchant_name: "Employer Payroll",
             bank_gateway: null,
             category: "Income",
+            subcategory: "Income",
+            payment_channel: "Salary Credit",
+            transaction_kind: "income",
+            confidence_score: 95,
             raw_description: "Salary",
             clean_description: "salary",
             normalized_transaction_type: "income",
             flags: {
+              is_transfer: false,
               is_internal_transfer: false,
+              is_subscription: false,
+              is_recurring: true,
+              is_salary: true,
+              is_cash: false,
+              is_atm: false,
+              is_loan: false,
+              is_investment: false,
+              is_tax: false,
               is_income: true,
               is_expense: false,
             },
@@ -147,6 +160,8 @@ describe("statements api contract", () => {
     expect(records[0]?.merchant_name).toBe("Employer Payroll");
     expect(records[0]?.bank_gateway).toBeNull();
     expect(records[0]?.category).toBe("Income");
+    expect(records[0]?.payment_channel).toBe("Salary Credit");
+    expect(records[0]?.confidence_score).toBe(95);
     expect(records[0]?.clean_description).toBe("salary");
     expect(records[0]?.normalized_transaction_type).toBe("income");
     expect(records[0]?.amount).toBe(1500);
@@ -187,6 +202,62 @@ describe("statements api contract", () => {
       }),
     ).rejects.toThrow(
       "Unable to upload statement right now. Please try again.",
+    );
+  });
+
+  it("reports exact field path when transaction payload mismatches schema", async () => {
+    const getMock = vi.mocked(apiClient.get);
+    getMock.mockResolvedValue({
+      data: {
+        success: true,
+        message: "Statement transactions retrieved successfully.",
+        data: [
+          {
+            transaction_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56ea",
+            statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+            transaction_date: "2026-07-03",
+            description: "Salary",
+            debit: null,
+            credit: "1500.00",
+            amount: "1500.00",
+            transaction_type: "credit",
+            balance: "2000.00",
+            currency: "USD",
+            reference_number: "REF-1",
+            merchant_name: "Employer Payroll",
+            bank_gateway: null,
+            category: "Income",
+            subcategory: "Income",
+            transaction_kind: "income",
+            confidence_score: 95,
+            raw_description: "Salary",
+            clean_description: "salary",
+            normalized_transaction_type: "income",
+            flags: {
+              is_transfer: false,
+              is_internal_transfer: false,
+              is_subscription: false,
+              is_recurring: true,
+              is_salary: true,
+              is_cash: false,
+              is_atm: false,
+              is_loan: false,
+              is_investment: false,
+              is_tax: false,
+              is_income: true,
+              is_expense: false,
+            },
+            raw_row_json: { row: 1 },
+            created_at: "2026-07-03T09:00:03.000Z",
+          },
+        ],
+      },
+    });
+
+    await expect(
+      getStatementTransactions("8fe70b89-2325-42b6-82a6-16c6268d56eb"),
+    ).rejects.toThrow(
+      "Transaction response validation failed at data.0.payment_channel",
     );
   });
 });

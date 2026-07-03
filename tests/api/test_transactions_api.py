@@ -86,10 +86,23 @@ def _create_seed_data(session_factory) -> tuple[str, str]:
                     merchant_name="Employer Payroll",
                     bank_gateway=None,
                     category="Income",
+                    subcategory="Income",
+                    payment_channel="Salary Credit",
+                    transaction_kind="income",
+                    confidence_score=95,
+                    is_transfer=False,
                     raw_description="Salary",
                     clean_description="salary",
                     normalized_transaction_type="income",
                     is_internal_transfer=False,
+                    is_subscription=False,
+                    is_recurring=True,
+                    is_salary=True,
+                    is_cash=False,
+                    is_atm=False,
+                    is_loan=False,
+                    is_investment=False,
+                    is_tax=False,
                     is_income=True,
                     is_expense=False,
                     raw_row_json=json.dumps({"row": 1}),
@@ -108,10 +121,23 @@ def _create_seed_data(session_factory) -> tuple[str, str]:
                     merchant_name="Local Store",
                     bank_gateway=None,
                     category="Food & Dining",
+                    subcategory="Dining",
+                    payment_channel="UPI",
+                    transaction_kind="expense",
+                    confidence_score=80,
+                    is_transfer=False,
                     raw_description="Groceries",
                     clean_description="groceries",
                     normalized_transaction_type="expense",
                     is_internal_transfer=False,
+                    is_subscription=False,
+                    is_recurring=False,
+                    is_salary=False,
+                    is_cash=False,
+                    is_atm=False,
+                    is_loan=False,
+                    is_investment=False,
+                    is_tax=False,
                     is_income=False,
                     is_expense=True,
                     raw_row_json=json.dumps({"row": 2}),
@@ -133,12 +159,50 @@ def test_get_statement_transactions(tmp_path) -> None:
     payload = response.json()
     assert payload["success"] is True
     assert len(payload["data"]) == 2
+    required_string_fields = [
+        "transaction_uuid",
+        "statement_uuid",
+        "transaction_date",
+        "description",
+        "transaction_type",
+        "category",
+        "payment_channel",
+        "transaction_kind",
+        "raw_description",
+        "clean_description",
+        "normalized_transaction_type",
+        "created_at",
+    ]
+    required_flag_fields = [
+        "is_transfer",
+        "is_internal_transfer",
+        "is_subscription",
+        "is_recurring",
+        "is_salary",
+        "is_cash",
+        "is_atm",
+        "is_loan",
+        "is_investment",
+        "is_tax",
+        "is_income",
+        "is_expense",
+    ]
+
+    for row in payload["data"]:
+      for field in required_string_fields:
+          assert field in row
+          assert isinstance(row[field], str)
+
+      assert "confidence_score" in row
+      assert isinstance(row["confidence_score"], int)
+      assert "flags" in row
+      for flag in required_flag_fields:
+          assert flag in row["flags"]
+          assert isinstance(row["flags"][flag], bool)
+
     assert payload["data"][0]["statement_uuid"] == statement_uuid
-    assert payload["data"][0]["category"]
-    assert "clean_description" in payload["data"][0]
-    assert "bank_gateway" in payload["data"][0]
-    assert "normalized_transaction_type" in payload["data"][0]
-    assert "flags" in payload["data"][0]
+    salary_row = next(item for item in payload["data"] if item["description"] == "Salary")
+    assert salary_row["flags"]["is_recurring"] is True
 
 
 def test_list_transactions_with_filters(tmp_path) -> None:

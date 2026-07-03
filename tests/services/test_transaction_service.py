@@ -103,9 +103,11 @@ def test_store_transactions_persists_enriched_fields() -> None:
 
     rows = service.get_statement_transactions(statement_uuid=statement_uuid)
     assert rows
-    assert rows[0].category == "Investments"
+    assert rows[0].category == "Investment"
     assert rows[0].clean_description == "Groww Sip"
     assert rows[0].bank_gateway is None
+    assert rows[0].payment_channel == "UPI"
+    assert rows[0].confidence_score >= 0
     assert rows[0].normalized_transaction_type == "expense"
 
 
@@ -158,3 +160,33 @@ def test_list_transactions_supports_search_and_filters() -> None:
     )
     assert len(entertainment_only) == 1
     assert entertainment_only[0].category == "Entertainment"
+
+
+def test_reprocessing_does_not_duplicate_enrichment() -> None:
+    service, _, statement_uuid = _setup()
+
+    tx = TransactionCreateDTO(
+        transaction_date=date(2026, 1, 5),
+        description="UPI/P2M/NETFLIX",
+        debit=Decimal("-199.00"),
+        credit=None,
+        amount=Decimal("-199.00"),
+        transaction_type="debit",
+        balance=Decimal("500.00"),
+        currency="INR",
+        reference_number="-",
+        raw_row_json={"r": 5},
+    )
+
+    first_inserted, _ = service.store_transactions(
+        statement_uuid=statement_uuid,
+        transactions=[tx],
+    )
+    second_inserted, second_duplicates = service.store_transactions(
+        statement_uuid=statement_uuid,
+        transactions=[tx],
+    )
+
+    assert first_inserted == 1
+    assert second_inserted == 0
+    assert second_duplicates == 1

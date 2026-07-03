@@ -190,11 +190,24 @@ describe("AppStatementsPage", () => {
           merchant_name: "Employer Payroll",
           bank_gateway: null,
           category: "Income",
+          subcategory: "Income",
+          payment_channel: "Salary Credit",
+          transaction_kind: "income",
+          confidence_score: 95,
           raw_description: "Salary",
           clean_description: "salary",
           normalized_transaction_type: "income",
           flags: {
+            is_transfer: false,
             is_internal_transfer: false,
+            is_subscription: false,
+            is_recurring: true,
+            is_salary: true,
+            is_cash: false,
+            is_atm: false,
+            is_loan: false,
+            is_investment: false,
+            is_tax: false,
             is_income: true,
             is_expense: false,
           },
@@ -237,11 +250,24 @@ describe("AppStatementsPage", () => {
         merchant_name: "GROWW SIP",
         bank_gateway: null,
         category: "Investments",
+        subcategory: "Investment",
+        payment_channel: "UPI",
+        transaction_kind: "expense",
+        confidence_score: 90,
         raw_description: "UPI/P2M/GROWW SIP",
         clean_description: "groww sip",
         normalized_transaction_type: "expense",
         flags: {
+          is_transfer: false,
           is_internal_transfer: false,
+          is_subscription: false,
+          is_recurring: true,
+          is_salary: false,
+          is_cash: false,
+          is_atm: false,
+          is_loan: false,
+          is_investment: true,
+          is_tax: false,
           is_income: false,
           is_expense: true,
         },
@@ -263,11 +289,24 @@ describe("AppStatementsPage", () => {
         merchant_name: "BP Petrol Pump",
         bank_gateway: "YES BANK LIMITED",
         category: "Fuel",
+        subcategory: "Fuel",
+        payment_channel: "UPI",
+        transaction_kind: "expense",
+        confidence_score: 85,
         raw_description: "UPI/P2M/BP Petrol Pump",
         clean_description: "bp petrol pump",
         normalized_transaction_type: "expense",
         flags: {
+          is_transfer: false,
           is_internal_transfer: false,
+          is_subscription: false,
+          is_recurring: false,
+          is_salary: false,
+          is_cash: false,
+          is_atm: false,
+          is_loan: false,
+          is_investment: false,
+          is_tax: false,
           is_income: false,
           is_expense: true,
         },
@@ -322,12 +361,25 @@ describe("AppStatementsPage", () => {
         merchant_name: "GROWW INVEST TECH PVT",
         bank_gateway: "HDFC BANK LTD",
         category: "Investments",
+        subcategory: "Investment",
+        payment_channel: "UPI",
+        transaction_kind: "expense",
+        confidence_score: 92,
         raw_description:
           "UPI/P2M/617688132790/GROWW INVEST TECH PVT/Paid V/HDFC BANK LTD",
         clean_description: "groww invest tech pvt",
         normalized_transaction_type: "expense",
         flags: {
+          is_transfer: false,
           is_internal_transfer: false,
+          is_subscription: false,
+          is_recurring: true,
+          is_salary: false,
+          is_cash: false,
+          is_atm: false,
+          is_loan: false,
+          is_investment: true,
+          is_tax: false,
           is_income: false,
           is_expense: true,
         },
@@ -345,9 +397,11 @@ describe("AppStatementsPage", () => {
     fireEvent.click(screen.getByLabelText("Open transaction details"));
 
     expect(await screen.findByText("Transaction Details")).toBeInTheDocument();
-    expect(screen.getByText("Description:")).toBeInTheDocument();
+    expect(screen.getByText("Normalized Description:")).toBeInTheDocument();
     expect(screen.getByText("Merchant:")).toBeInTheDocument();
     expect(screen.getByText("Bank / Gateway:")).toBeInTheDocument();
+    expect(screen.getByText("Payment Channel:")).toBeInTheDocument();
+    expect(screen.getByText("Confidence Score:")).toBeInTheDocument();
     expect(screen.getByText("HDFC BANK LTD")).toBeInTheDocument();
     expect(screen.getByText("Original Bank Narration")).toBeInTheDocument();
     expect(
@@ -395,12 +449,25 @@ describe("AppStatementsPage", () => {
         merchant_name: "MUNIYANDI C",
         bank_gateway: "YES BANK LIMITED YBS",
         category: "Personal Care",
+        subcategory: "Personal Care",
+        payment_channel: "UPI",
+        transaction_kind: "expense",
+        confidence_score: 88,
         raw_description:
           "UPI/P2M/654547230671/MUNIYANDI C /haircu/YES BANK LIMITED YBS",
         clean_description: "Haircut",
         normalized_transaction_type: "expense",
         flags: {
+          is_transfer: false,
           is_internal_transfer: false,
+          is_subscription: false,
+          is_recurring: false,
+          is_salary: false,
+          is_cash: false,
+          is_atm: false,
+          is_loan: false,
+          is_investment: false,
+          is_tax: false,
           is_income: false,
           is_expense: true,
         },
@@ -420,10 +487,15 @@ describe("AppStatementsPage", () => {
     const merchantHeader = screen.getByRole("columnheader", {
       name: "Merchant",
     });
+    const channelHeader = screen.getByRole("columnheader", {
+      name: "Payment Channel",
+    });
     expect(descriptionHeader).toBeInTheDocument();
     expect(merchantHeader).toBeInTheDocument();
+    expect(channelHeader).toBeInTheDocument();
     expect(screen.getByText("Haircut")).toBeInTheDocument();
     expect(screen.getByText("MUNIYANDI C")).toBeInTheDocument();
+    expect(screen.getByText("UPI")).toBeInTheDocument();
   });
 
   it("closes details modal with Close button", async () => {

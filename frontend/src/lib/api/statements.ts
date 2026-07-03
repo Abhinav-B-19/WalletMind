@@ -52,12 +52,25 @@ const transactionDataSchema = z.object({
   merchant_name: z.string().nullable().optional(),
   bank_gateway: z.string().nullable().optional(),
   category: z.string(),
+  subcategory: z.string().nullable().optional(),
+  payment_channel: z.string(),
+  transaction_kind: z.string(),
+  confidence_score: z.number().int().nonnegative(),
   raw_description: z.string(),
   clean_description: z.string(),
   normalized_transaction_type: z.string(),
   flags: z
     .object({
+      is_transfer: z.boolean(),
       is_internal_transfer: z.boolean(),
+      is_subscription: z.boolean(),
+      is_recurring: z.boolean(),
+      is_salary: z.boolean(),
+      is_cash: z.boolean(),
+      is_atm: z.boolean(),
+      is_loan: z.boolean(),
+      is_investment: z.boolean(),
+      is_tax: z.boolean(),
       is_income: z.boolean(),
       is_expense: z.boolean(),
     })
@@ -261,12 +274,26 @@ export async function getStatementTransactions(
     return parsed.data;
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const firstIssue = error.issues[0];
+      const issuePath =
+        firstIssue?.path?.length && firstIssue.path.length > 0
+          ? firstIssue.path.join(".")
+          : "unknown";
+      const issueCode = firstIssue?.code ?? "unknown";
+      const payloadKeys =
+        typeof (error as unknown) === "object" && error !== null
+          ? Object.keys((error as { input?: unknown }).input ?? {})
+          : [];
+
       console.error("[transactions] schema:validation_failed", {
         statementUuid,
         issues: error.issues,
+        failingField: issuePath,
+        issueCode,
+        payloadKeys,
       });
       throw new Error(
-        `Transaction response validation failed: ${error.issues[0]?.message ?? "Unknown schema mismatch"}`,
+        `Transaction response validation failed at ${issuePath}: ${firstIssue?.message ?? "Unknown schema mismatch"}`,
       );
     }
 

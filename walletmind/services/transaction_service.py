@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from backend.app.models.statement import Statement
 from backend.app.models.transaction import Transaction
 from walletmind.exceptions import StatementNotFoundError, StatementStorageError
+from walletmind.intelligence import TransactionEnricher
 from walletmind.schemas.transaction import TransactionCreateDTO, TransactionDTO
 from walletmind.services.transaction_normalizer import TransactionNormalizer
 
@@ -25,6 +26,7 @@ class TransactionService:
     def __init__(self, *, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
         self._normalizer = TransactionNormalizer()
+        self._enricher = TransactionEnricher()
 
     def store_transactions(
         self,
@@ -44,6 +46,10 @@ class TransactionService:
             seen_signatures: set[tuple[date, str, Decimal]] = set()
             for tx in transactions:
                 enriched = self._normalizer.enrich(
+                    transaction=tx,
+                    account_holder_name=statement.user.full_name if statement.user else None,
+                )
+                intelligence = self._enricher.enrich(
                     transaction=tx,
                     account_holder_name=statement.user.full_name if statement.user else None,
                 )
@@ -76,13 +82,26 @@ class TransactionService:
                     balance=tx.balance,
                     currency=tx.currency,
                     reference_number=tx.reference_number,
-                    merchant_name=enriched.merchant_name,
-                    bank_gateway=enriched.bank_gateway,
-                    category=enriched.category,
+                    merchant_name=intelligence.merchant_name,
+                    bank_gateway=intelligence.bank_gateway,
+                    category=intelligence.category,
+                    subcategory=intelligence.subcategory,
+                    payment_channel=intelligence.payment_channel,
+                    transaction_kind=intelligence.transaction_kind,
+                    confidence_score=intelligence.confidence_score,
+                    is_transfer=intelligence.is_transfer,
                     raw_description=enriched.raw_description,
                     clean_description=enriched.clean_description,
                     normalized_transaction_type=enriched.normalized_transaction_type,
-                    is_internal_transfer=enriched.is_internal_transfer,
+                    is_internal_transfer=intelligence.is_internal_transfer,
+                    is_subscription=intelligence.is_subscription,
+                    is_recurring=intelligence.is_recurring,
+                    is_salary=intelligence.is_salary,
+                    is_cash=intelligence.is_cash,
+                    is_atm=intelligence.is_atm,
+                    is_loan=intelligence.is_loan,
+                    is_investment=intelligence.is_investment,
+                    is_tax=intelligence.is_tax,
                     is_income=enriched.is_income,
                     is_expense=enriched.is_expense,
                     raw_row_json=json.dumps(tx.raw_row_json, ensure_ascii=True, sort_keys=True),
@@ -193,11 +212,24 @@ class TransactionService:
             merchant_name=record.merchant_name,
             bank_gateway=record.bank_gateway,
             category=record.category,
+            subcategory=record.subcategory,
+            payment_channel=record.payment_channel,
+            transaction_kind=record.transaction_kind,
+            confidence_score=int(record.confidence_score),
             raw_description=record.raw_description,
             clean_description=record.clean_description,
             normalized_transaction_type=record.normalized_transaction_type,
             flags={
+                "is_transfer": bool(record.is_transfer),
                 "is_internal_transfer": bool(record.is_internal_transfer),
+                "is_subscription": bool(record.is_subscription),
+                "is_recurring": bool(record.is_recurring),
+                "is_salary": bool(record.is_salary),
+                "is_cash": bool(record.is_cash),
+                "is_atm": bool(record.is_atm),
+                "is_loan": bool(record.is_loan),
+                "is_investment": bool(record.is_investment),
+                "is_tax": bool(record.is_tax),
                 "is_income": bool(record.is_income),
                 "is_expense": bool(record.is_expense),
             },
