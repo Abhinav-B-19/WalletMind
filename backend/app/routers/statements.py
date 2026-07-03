@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile,
 from backend.app.api.dependencies import (
     get_budget_service,
     get_financial_health_service,
+    get_financial_report_service,
     get_processing_dispatcher,
     get_spending_insights_service,
     get_statement_upload_service,
@@ -28,6 +29,10 @@ from backend.app.services.budget.budget_service import (
 from backend.app.services.health.financial_health_service import (
     FinancialHealthScoreResult,
     FinancialHealthService,
+)
+from backend.app.services.report.financial_report_service import (
+    FinancialReportService,
+    MonthlyFinancialReportResult,
 )
 from walletmind.schemas.statement import UploadResponseDTO
 from walletmind.schemas.transaction import TransactionDTO
@@ -241,5 +246,28 @@ def get_statement_budget_recommendations(
     )
     return ApiResponse(
         message="Statement budget recommendations generated successfully.",
+        data=result,
+    )
+
+
+@router.get(
+    "/{statement_uuid}/monthly-report",
+    response_model=ApiResponse[MonthlyFinancialReportResult],
+    status_code=status.HTTP_200_OK,
+    responses=error_responses,
+)
+def get_statement_monthly_report(
+    statement_uuid: UUID,
+    *,
+    service: Annotated[
+        FinancialReportService,
+        Depends(get_financial_report_service),
+    ],
+) -> ApiResponse[MonthlyFinancialReportResult]:
+    """Generate AI-powered monthly report built on deterministic analysis modules."""
+
+    result = service.generate_monthly_report(statement_uuid=statement_uuid)
+    return ApiResponse(
+        message="Statement monthly report generated successfully.",
         data=result,
     )

@@ -261,6 +261,28 @@ def test_gemini_client_passes_json_mode_generation_config() -> None:
     assert "response_schema" in model_client.last_generation_config
 
 
+def test_gemini_client_generation_config_copies_schema_object() -> None:
+    model_client = FakeModelClient(response=_make_success_response())
+    sdk_module = FakeSDKModule(model_client=model_client)
+    client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
+
+    schema = {
+        "type": "object",
+        "properties": {"summary": {"type": "string"}},
+    }
+    request = client.build_request(
+        system_prompt="system",
+        user_prompt="user",
+        response_mime_type="application/json",
+        response_schema=schema,
+    )
+    client.generate(request)
+
+    assert model_client.last_generation_config is not None
+    assert model_client.last_generation_config["response_schema"] == schema
+    assert model_client.last_generation_config["response_schema"] is not schema
+
+
 def test_gemini_client_falls_back_when_json_mode_not_supported() -> None:
     model_client = UnsupportedJsonModeThenSuccessModelClient(
         response=_make_success_response()

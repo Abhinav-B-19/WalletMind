@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -126,7 +127,7 @@ class GeminiClient:
         if request.response_mime_type is not None:
             config["response_mime_type"] = request.response_mime_type
         if request.response_schema is not None:
-            config["response_schema"] = request.response_schema
+            config["response_schema"] = copy.deepcopy(request.response_schema)
         return config
 
     def _generate_content(

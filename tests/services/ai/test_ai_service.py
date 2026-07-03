@@ -67,6 +67,28 @@ def test_ai_service_orchestration() -> None:
     }
 
 
+def test_ai_service_forwards_schema_without_mutation() -> None:
+    prompt_builder = StubPromptBuilder()
+    client = StubGeminiClient()
+    service = AIService(gemini_client=client, prompt_builder=prompt_builder)
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+        },
+    }
+
+    service.generate(
+        system_instruction="System instruction",
+        user_input="User input",
+        response_schema=schema,
+    )
+
+    assert client.request_args["response_schema"] == schema
+    assert client.request_args["response_schema"] is not schema
+
+
 def test_ai_service_health() -> None:
     service = AIService(
         gemini_client=StubGeminiClient(),

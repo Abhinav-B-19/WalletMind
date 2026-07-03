@@ -15,6 +15,7 @@ from backend.app.services.budget.budget_service import BudgetService
 from backend.app.services.health.financial_health_service import (
     FinancialHealthService,
 )
+from backend.app.services.report.financial_report_service import FinancialReportService
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.transaction_service import TransactionService
@@ -73,3 +74,9 @@ def get_budget_service(request: Request) -> BudgetService:
     """Return the app-scoped budget recommendation service instance."""
 
     return request.app.state.budget_service
+
+
+def get_financial_report_service(request: Request) -> FinancialReportService:
+    """Return the app-scoped monthly financial report service instance."""
+
+    return request.app.state.financial_report_service

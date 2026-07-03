@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError
@@ -27,8 +28,12 @@ from walletmind.services.transaction_service import TransactionService
 class BudgetAIExplanation(BaseModel):
     """AI explanation payload for budget recommendation results."""
 
-    summary: str = Field(..., min_length=1)
-    recommendations: list[str] = Field(...)
+    summary: str = Field(..., min_length=1, max_length=280)
+    recommendations: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+    )
 
 
 class BudgetRecommendationResult(BaseModel):
@@ -48,9 +53,15 @@ class BudgetService:
         "type": "object",
         "required": ["summary", "recommendations"],
         "properties": {
-            "summary": {"type": "string"},
+            "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280,
+            },
             "recommendations": {
                 "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
                 "items": {"type": "string"},
             },
         },
@@ -65,10 +76,13 @@ class BudgetService:
         "Do not recommend stocks, mutual funds, crypto, loans, or insurance products. "
         "Focus on spending control, savings habits, emergency fund discipline, and "
         "practical budgeting behaviors. "
+        "Keep output concise. "
         "Output must be a single JSON object only. "
         "Do not include markdown, code fences, prose before JSON, or prose after JSON. "
         "Return exactly this schema: "
-        '{"summary": string, "recommendations": string[]}. '
+        '{"summary": string, "recommendations": [string, string, string]}. '
+        "Summary must be one short paragraph (max 280 chars). "
+        "Recommendations must be exactly 3 concise items (max 120 chars each). "
         "Do not include additional keys."
     )
 
@@ -139,10 +153,17 @@ class BudgetService:
             user_input=ai_prompt,
             response_mime_type="application/json",
             response_schema=self._RESPONSE_SCHEMA,
+            max_output_tokens=220,
         )
 
         ai_elapsed_ms = int((time.perf_counter() - ai_started) * 1000)
-        ai_parsed = self._parse_ai_response(ai_response.text)
+        ai_parsed = self._parse_ai_response(
+            raw_text=ai_response.text,
+            finish_reason=ai_response.finish_reason,
+            prompt_tokens=ai_response.prompt_tokens,
+            completion_tokens=ai_response.completion_tokens,
+            total_tokens=ai_response.total_tokens,
+        )
 
         total_execution_ms = int((time.perf_counter() - started_at) * 1000)
         self._logger.info(
@@ -155,9 +176,11 @@ class BudgetService:
                 "ai_execution_ms": ai_elapsed_ms,
                 "execution_ms": total_execution_ms,
                 "model": ai_response.model,
+                "finish_reason": ai_response.finish_reason,
                 "prompt_tokens": ai_response.prompt_tokens,
                 "completion_tokens": ai_response.completion_tokens,
                 "total_tokens": ai_response.total_tokens,
+                "prompt_characters": len(ai_prompt),
             },
         )
 
@@ -187,55 +210,39 @@ class BudgetService:
         summary_payload: dict[str, object],
     ) -> str:
         payload = {
-            "health_score": {
-                "overall_score": health.overall_score,
-                "grade": health.grade,
-                "components": health.components.model_dump(),
-            },
-            "spending_summary": {
-                "cash_flow": summary_payload.get("cash_flow", {}),
-                "top_spending_categories": summary_payload.get(
-                    "top_spending_categories",
-                    [],
-                )[:5],
-                "recurring_subscriptions": summary_payload.get(
-                    "recurring_subscriptions",
-                    [],
-                )[:5],
-            },
-            "budget": {
-                "monthly_budget": {
-                    category: {
-                        "historical": values.historical,
-                        "recommended": values.recommended,
-                        "potential_saving": values.potential_saving,
-                    }
-                    for category, values in budget.monthly_budget.items()
-                },
-                "overall_potential_savings": budget.overall_potential_savings,
-                "overspending_categories": budget.overspending_categories,
-                "underutilized_categories": budget.underutilized_categories,
-                "emergency_fund_recommendation": budget.emergency_fund_recommendation,
-                "discretionary_spending_allowance": (
-                    budget.discretionary_spending_allowance
-                ),
-            },
+            "overall_health_score": health.overall_score,
+            "health_grade": health.grade,
+            "top_spending_categories": summary_payload.get(
+                "top_spending_categories",
+                [],
+            )[:5],
+            "top_overspending_categories": budget.overspending_categories[:5],
+            "overall_potential_savings": budget.overall_potential_savings,
+            "emergency_fund_recommendation": budget.emergency_fund_recommendation,
             "priority_recommendations": [
                 recommendation.model_dump()
-                for recommendation in priority_recommendations
+                for recommendation in priority_recommendations[:3]
             ],
         }
         return (
             "Explain why these deterministic budgets are recommended, which budget "
-            "changes should be prioritized first, and practical budgeting actions "
-            "that are small and achievable.\n"
+            "changes should be prioritized first, and practical budgeting actions.\n"
+            "Keep the output short and direct.\n"
             "Return only a single JSON object matching this exact schema and nothing "
-            'else: {"summary": string, "recommendations": string[]}.\n'
+            'else: {"summary": string, "recommendations": [string, string, string]}.\n'
             "Forbidden: markdown, bullet lists, code fences, commentary outside JSON.\n"
             f"DATA:\n{json.dumps(payload, ensure_ascii=True, sort_keys=True)}"
         )
 
-    def _parse_ai_response(self, raw_text: str) -> BudgetAIExplanation:
+    def _parse_ai_response(
+        self,
+        *,
+        raw_text: str,
+        finish_reason: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        total_tokens: int,
+    ) -> BudgetAIExplanation:
         candidate = raw_text.strip()
         if not candidate:
             raise AIResponseError("Budget AI response was empty.")
@@ -250,6 +257,10 @@ class BudgetService:
                 extra={
                     "error": str(exc),
                     "raw_model_response": raw_text,
+                    "finish_reason": finish_reason,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
                 },
             )
             raise AIResponseError(
@@ -264,6 +275,10 @@ class BudgetService:
                 extra={
                     "error": str(exc),
                     "raw_model_response": raw_text,
+                    "finish_reason": finish_reason,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
                 },
             )
             raise AIResponseError("Budget AI response schema is invalid.") from exc

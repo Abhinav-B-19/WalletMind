@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -59,7 +60,7 @@ class AIService:
         if response_mime_type is not None:
             request_kwargs["response_mime_type"] = response_mime_type
         if response_schema is not None:
-            request_kwargs["response_schema"] = dict(response_schema)
+            request_kwargs["response_schema"] = copy.deepcopy(dict(response_schema))
 
         request = self._gemini_client.build_request(
             **request_kwargs,
