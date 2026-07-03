@@ -90,7 +90,9 @@ describe("statements api contract", () => {
       },
     });
 
-    const statements = await listStatements("f7ed2559-7ec3-4433-b9e4-af8ca6adf72b");
+    const statements = await listStatements(
+      "f7ed2559-7ec3-4433-b9e4-af8ca6adf72b",
+    );
 
     expect(statements).toHaveLength(1);
     expect(statements[0]?.status).toBe("ready_for_analysis");
@@ -151,7 +153,9 @@ describe("statements api contract", () => {
         userUuid: "f7ed2559-7ec3-4433-b9e4-af8ca6adf72b",
         file: new File(["a,b\n1,2"], "statement.csv", { type: "text/csv" }),
       }),
-    ).rejects.toThrow("Received an unexpected response from the upload service.");
+    ).rejects.toThrow(
+      "Received an unexpected response from the upload service.",
+    );
   });
 
   it("maps transport failures to user-friendly upload error", async () => {
@@ -163,6 +167,8 @@ describe("statements api contract", () => {
         userUuid: "f7ed2559-7ec3-4433-b9e4-af8ca6adf72b",
         file: new File(["a,b\n1,2"], "statement.csv", { type: "text/csv" }),
       }),
-    ).rejects.toThrow("Unable to upload statement right now. Please try again.");
+    ).rejects.toThrow(
+      "Unable to upload statement right now. Please try again.",
+    );
   });
 });

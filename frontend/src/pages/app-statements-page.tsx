@@ -556,7 +556,9 @@ export function AppStatementsPage() {
                                 size="sm"
                                 variant="secondary"
                                 type="button"
-                                onClick={() => void handleViewDetails(statement)}
+                                onClick={() =>
+                                  void handleViewDetails(statement)
+                                }
                               >
                                 View Details
                               </Button>
@@ -567,7 +569,9 @@ export function AppStatementsPage() {
                                 disabled={
                                   isDeleting === statement.statement_uuid
                                 }
-                                onClick={() => setStatementPendingDelete(statement)}
+                                onClick={() =>
+                                  setStatementPendingDelete(statement)
+                                }
                               >
                                 <Trash2 className="mr-2 h-[var(--icon-sm)] w-[var(--icon-sm)]" />
                                 Delete
@@ -670,17 +674,49 @@ export function AppStatementsPage() {
         }
       >
         {selectedStatement ? (
-          <div className="space-y-3 px-6 pb-2 text-xs text-[var(--text-muted)] sm:grid sm:grid-cols-3 sm:gap-3 sm:space-y-0">
+          <div className="space-y-3 px-6 pb-2 text-xs text-[var(--text-muted)] sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 sm:space-y-0">
             <p>
-              Parsed:{" "}
+              Total Transactions:{" "}
               <span className="text-[var(--text)]">
                 {selectedStatement.parsed_transaction_count}
               </span>
             </p>
             <p>
-              Skipped:{" "}
+              Rows Parsed:{" "}
               <span className="text-[var(--text)]">
-                {selectedStatement.failed_transaction_count}
+                {selectedStatement.rows_parsed ??
+                  selectedStatement.parsed_transaction_count}
+              </span>
+            </p>
+            <p>
+              Rows Skipped:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.rows_skipped ??
+                  selectedStatement.failed_transaction_count}
+              </span>
+            </p>
+            <p>
+              Parser:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.parser_type}
+              </span>
+            </p>
+            <p>
+              Bank:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.bank_name ?? "Unknown"}
+              </span>
+            </p>
+            <p>
+              Processing Time:{" "}
+              <span className="text-[var(--text)]">
+                {selectedStatement.parsing_duration_ms ?? 0} ms
+              </span>
+            </p>
+            <p>
+              Status:{" "}
+              <span className="text-[var(--text)]">
+                {getStatusLabel(selectedStatement)}
               </span>
             </p>
             <p>
@@ -696,20 +732,26 @@ export function AppStatementsPage() {
 
         <div className="max-h-[80vh] overflow-auto rounded-b-[var(--radius-md)] border-t border-[var(--border)] px-6 pb-6">
           {isLoadingDetails ? (
-            <p className="py-4 text-sm text-[var(--text-muted)]">Loading transactions...</p>
+            <p className="py-4 text-sm text-[var(--text-muted)]">
+              Loading transactions...
+            </p>
           ) : null}
 
           {!isLoadingDetails && detailsError ? (
             <p className="py-4 text-sm text-[var(--danger)]">{detailsError}</p>
           ) : null}
 
-          {!isLoadingDetails && !detailsError && statementTransactions.length === 0 ? (
+          {!isLoadingDetails &&
+          !detailsError &&
+          statementTransactions.length === 0 ? (
             <p className="py-4 text-sm text-[var(--text-muted)]">
               No parsed transactions available for this statement.
             </p>
           ) : null}
 
-          {!isLoadingDetails && !detailsError && statementTransactions.length > 0 ? (
+          {!isLoadingDetails &&
+          !detailsError &&
+          statementTransactions.length > 0 ? (
             <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]">
               <table className="min-w-full divide-y divide-[var(--border)] text-xs">
                 <thead className="bg-[var(--surface-soft)] text-left text-[var(--text-muted)]">
@@ -724,14 +766,26 @@ export function AppStatementsPage() {
                 <tbody className="divide-y divide-[var(--border)]">
                   {statementTransactions.map((transaction) => (
                     <tr key={transaction.transaction_uuid}>
-                      <td className="px-3 py-2">{new Date(transaction.transaction_date).toLocaleDateString()}</td>
-                      <td className="max-w-[22rem] truncate px-3 py-2" title={transaction.description}>
+                      <td className="px-3 py-2">
+                        {new Date(
+                          transaction.transaction_date,
+                        ).toLocaleDateString()}
+                      </td>
+                      <td
+                        className="max-w-[22rem] truncate px-3 py-2"
+                        title={transaction.description}
+                      >
                         {transaction.description}
                       </td>
-                      <td className="px-3 py-2 capitalize">{transaction.transaction_type}</td>
-                      <td className="px-3 py-2">{transaction.amount.toFixed(2)}</td>
+                      <td className="px-3 py-2 capitalize">
+                        {transaction.transaction_type}
+                      </td>
                       <td className="px-3 py-2">
-                        {transaction.balance !== null && transaction.balance !== undefined
+                        {transaction.amount.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {transaction.balance !== null &&
+                        transaction.balance !== undefined
                           ? transaction.balance.toFixed(2)
                           : "-"}
                       </td>
@@ -759,7 +813,7 @@ export function AppStatementsPage() {
         onConfirm={() => void confirmDelete()}
         isConfirming={Boolean(
           statementPendingDelete &&
-            isDeleting === statementPendingDelete.statement_uuid,
+          isDeleting === statementPendingDelete.statement_uuid,
         )}
       />
     </div>

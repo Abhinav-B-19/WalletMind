@@ -214,12 +214,16 @@ describe("AppStatementsPage", () => {
 
     await screen.findAllByText("alpha.csv");
     fireEvent.click(screen.getAllByRole("button", { name: "View Details" })[0]);
-    expect(await screen.findByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Close" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Close" }),
+      ).not.toBeInTheDocument();
     });
   });
 

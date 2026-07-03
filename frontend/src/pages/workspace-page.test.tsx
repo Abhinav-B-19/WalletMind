@@ -55,7 +55,9 @@ describe("WorkspacePage", () => {
     expect(
       screen.queryByText("No statements in your library yet"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("1 total statement in your library.")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 total statement in your library."),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Open Statement Library" }),
     ).toBeInTheDocument();
@@ -144,26 +146,28 @@ describe("WorkspacePage", () => {
   });
 
   it("renders basic profile cards and preserves integration after refresh-like remount", async () => {
-    const listSpy = vi.spyOn(statementsApi, "listStatements").mockResolvedValue([
-      {
-        statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
-        stored_file_path: "/tmp/stored.csv",
-        original_filename: "refresh.csv",
-        stored_filename: "stored.csv",
-        file_size: 77,
-        file_type: "csv",
-        parser_type: "csv",
-        bank_name: null,
-        classification_confidence: 0.88,
-        classification_method: "header-keyword",
-        classified_at: "2026-07-03T09:00:01.000Z",
-        parsed_transaction_count: 0,
-        failed_transaction_count: 0,
-        analysis_status: "ready_for_parsing",
-        status: "ready_for_parsing",
-        uploaded_at: "2026-07-03T09:00:00.000Z",
-      },
-    ]);
+    const listSpy = vi
+      .spyOn(statementsApi, "listStatements")
+      .mockResolvedValue([
+        {
+          statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+          stored_file_path: "/tmp/stored.csv",
+          original_filename: "refresh.csv",
+          stored_filename: "stored.csv",
+          file_size: 77,
+          file_type: "csv",
+          parser_type: "csv",
+          bank_name: null,
+          classification_confidence: 0.88,
+          classification_method: "header-keyword",
+          classified_at: "2026-07-03T09:00:01.000Z",
+          parsed_transaction_count: 0,
+          failed_transaction_count: 0,
+          analysis_status: "ready_for_parsing",
+          status: "ready_for_parsing",
+          uploaded_at: "2026-07-03T09:00:00.000Z",
+        },
+      ]);
 
     const { unmount } = render(
       <MemoryRouter>

@@ -20,10 +20,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { PageTitle, SectionTitle } from "@/components/ui/section-title";
 import { StatCard } from "@/components/ui/stat-card";
 import { getStoredUser } from "@/lib/auth/storage";
-import {
-  listStatements,
-  type UploadedStatement,
-} from "@/lib/api/statements";
+import { listStatements, type UploadedStatement } from "@/lib/api/statements";
 
 const QUICK_ACTIONS = [
   {
@@ -118,7 +115,9 @@ export function WorkspacePage() {
   const readyForAnalysisStatements = useMemo(
     () =>
       statements
-        .filter((statement) => statement.analysis_status === "ready_for_analysis")
+        .filter(
+          (statement) => statement.analysis_status === "ready_for_analysis",
+        )
         .sort(
           (left, right) =>
             new Date(right.uploaded_at).getTime() -
@@ -223,10 +222,15 @@ export function WorkspacePage() {
             ) : null}
 
             {!isLoadingStatements && statementsError ? (
-              <ErrorState title="Recent Statements" description={statementsError} />
+              <ErrorState
+                title="Recent Statements"
+                description={statementsError}
+              />
             ) : null}
 
-            {!isLoadingStatements && !statementsError && recentStatements.length === 0 ? (
+            {!isLoadingStatements &&
+            !statementsError &&
+            recentStatements.length === 0 ? (
               <>
                 <EmptyState
                   title="No statements in your library yet"
@@ -241,7 +245,9 @@ export function WorkspacePage() {
               </>
             ) : null}
 
-            {!isLoadingStatements && !statementsError && recentStatements.length > 0 ? (
+            {!isLoadingStatements &&
+            !statementsError &&
+            recentStatements.length > 0 ? (
               <>
                 <p className="text-sm text-[var(--text-muted)]">
                   {statements.length} total statement
@@ -254,13 +260,17 @@ export function WorkspacePage() {
                       className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="truncate text-sm font-semibold" title={statement.original_filename}>
+                        <p
+                          className="truncate text-sm font-semibold"
+                          title={statement.original_filename}
+                        >
                           {statement.original_filename}
                         </p>
                         <Badge variant="muted">{statement.parser_type}</Badge>
                       </div>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Uploaded {new Date(statement.uploaded_at).toLocaleString()}
+                        Uploaded{" "}
+                        {new Date(statement.uploaded_at).toLocaleString()}
                       </p>
                     </div>
                   ))}
@@ -284,7 +294,9 @@ export function WorkspacePage() {
               </p>
             ) : null}
 
-            {!isLoadingStatements && !statementsError && readyForAnalysisStatements.length === 0 ? (
+            {!isLoadingStatements &&
+            !statementsError &&
+            readyForAnalysisStatements.length === 0 ? (
               <EmptyState
                 title="Nothing queued for AI analysis"
                 description="Once statements are uploaded, they will appear here as ready-to-analyze files for WalletMind AI."
@@ -292,7 +304,9 @@ export function WorkspacePage() {
               />
             ) : null}
 
-            {!isLoadingStatements && !statementsError && readyForAnalysisStatements.length > 0 ? (
+            {!isLoadingStatements &&
+            !statementsError &&
+            readyForAnalysisStatements.length > 0 ? (
               <div className="h-full space-y-2 overflow-y-auto pr-1">
                 {readyForAnalysisStatements.map((statement) => (
                   <div
@@ -300,10 +314,15 @@ export function WorkspacePage() {
                     className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-sm font-semibold" title={statement.original_filename}>
+                      <p
+                        className="truncate text-sm font-semibold"
+                        title={statement.original_filename}
+                      >
                         {statement.original_filename}
                       </p>
-                      <Badge>{formatStatusLabel(statement.analysis_status)}</Badge>
+                      <Badge>
+                        {formatStatusLabel(statement.analysis_status)}
+                      </Badge>
                     </div>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">
                       Parser: {statement.parser_type}
