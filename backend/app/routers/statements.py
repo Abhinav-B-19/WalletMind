@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile, status
 
 from backend.app.api.dependencies import (
     get_processing_dispatcher,
+    get_spending_insights_service,
     get_statement_upload_service,
     get_transaction_service,
 )
 from backend.app.api.schemas import ErrorResponse
 from backend.app.schemas.response import ApiResponse, DeleteStatusData
+from backend.app.services.analysis.spending_insights_service import (
+    SpendingInsightsResult,
+    SpendingInsightsService,
+)
 from walletmind.schemas.statement import UploadResponseDTO
 from walletmind.schemas.transaction import TransactionDTO
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
@@ -39,10 +45,16 @@ error_responses = {
 )
 async def upload_statement(
     background_tasks: BackgroundTasks,
-    user_uuid: UUID = Form(...),
-    file: UploadFile = File(...),
-    service: StatementUploadService = Depends(get_statement_upload_service),
-    dispatcher: ProcessingDispatcher = Depends(get_processing_dispatcher),
+    user_uuid: Annotated[UUID, Form(...)],
+    file: Annotated[UploadFile, File(...)],
+    service: Annotated[
+        StatementUploadService,
+        Depends(get_statement_upload_service),
+    ],
+    dispatcher: Annotated[
+        ProcessingDispatcher,
+        Depends(get_processing_dispatcher),
+    ],
 ) -> ApiResponse[UploadResponseDTO]:
     """Upload a statement file and persist metadata."""
 
@@ -60,7 +72,10 @@ async def upload_statement(
         content_type=file.content_type,
     )
     refreshed_statement = service.get_statement(statement.statement_uuid)
-    return ApiResponse(message="Statement uploaded successfully.", data=refreshed_statement)
+    return ApiResponse(
+        message="Statement uploaded successfully.",
+        data=refreshed_statement,
+    )
 
 
 @router.get(
@@ -71,7 +86,11 @@ async def upload_statement(
 )
 def list_statements(
     user_uuid: UUID | None = None,
-    service: StatementUploadService = Depends(get_statement_upload_service),
+    *,
+    service: Annotated[
+        StatementUploadService,
+        Depends(get_statement_upload_service),
+    ],
 ) -> ApiResponse[list[UploadResponseDTO]]:
     """List all uploaded statement metadata records."""
 
@@ -87,7 +106,11 @@ def list_statements(
 )
 def get_statement(
     statement_uuid: UUID,
-    service: StatementUploadService = Depends(get_statement_upload_service),
+    *,
+    service: Annotated[
+        StatementUploadService,
+        Depends(get_statement_upload_service),
+    ],
 ) -> ApiResponse[UploadResponseDTO]:
     """Get metadata for a single uploaded statement."""
 
@@ -103,7 +126,11 @@ def get_statement(
 )
 def delete_statement(
     statement_uuid: UUID,
-    service: StatementUploadService = Depends(get_statement_upload_service),
+    *,
+    service: Annotated[
+        StatementUploadService,
+        Depends(get_statement_upload_service),
+    ],
 ) -> ApiResponse[DeleteStatusData]:
     """Delete statement metadata and the uploaded file."""
 
@@ -122,9 +149,39 @@ def delete_statement(
 )
 def get_statement_transactions(
     statement_uuid: UUID,
-    service: TransactionService = Depends(get_transaction_service),
+    *,
+    service: Annotated[
+        TransactionService,
+        Depends(get_transaction_service),
+    ],
 ) -> ApiResponse[list[TransactionDTO]]:
     """List all parsed transactions for a statement."""
 
     rows = service.get_statement_transactions(statement_uuid=statement_uuid)
-    return ApiResponse(message="Statement transactions retrieved successfully.", data=rows)
+    return ApiResponse(
+        message="Statement transactions retrieved successfully.",
+        data=rows,
+    )
+
+
+@router.get(
+    "/{statement_uuid}/insights",
+    response_model=ApiResponse[SpendingInsightsResult],
+    status_code=status.HTTP_200_OK,
+    responses=error_responses,
+)
+def get_statement_insights(
+    statement_uuid: UUID,
+    *,
+    service: Annotated[
+        SpendingInsightsService,
+        Depends(get_spending_insights_service),
+    ],
+) -> ApiResponse[SpendingInsightsResult]:
+    """Generate AI spending insights for a processed statement."""
+
+    result = service.generate_statement_insights(statement_uuid=statement_uuid)
+    return ApiResponse(
+        message="Statement insights generated successfully.",
+        data=result,
+    )

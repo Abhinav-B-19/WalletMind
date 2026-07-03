@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable
 from typing import Any
 
 from pydantic import ValidationError
 
+from backend.app.core.config import AISettings, SettingsLoadError, get_ai_settings
 from backend.app.services.ai.exceptions import (
     AIConfigurationError,
     AIRateLimitError,
@@ -16,10 +16,6 @@ from backend.app.services.ai.exceptions import (
     AIServiceError,
 )
 from backend.app.services.ai.models import AIRequest, AIResponse
-
-_DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
-_DEFAULT_TEMPERATURE = 0.2
-_DEFAULT_MAX_OUTPUT_TOKENS = 1024
 
 
 class GeminiClient:
@@ -33,6 +29,7 @@ class GeminiClient:
         temperature: float | None = None,
         max_output_tokens: int | None = None,
         sdk_loader: Callable[[], Any] | None = None,
+        settings_provider: Callable[[], AISettings] | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the client with optional explicit configuration overrides."""
@@ -42,6 +39,7 @@ class GeminiClient:
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
         self._sdk_loader = sdk_loader or self._default_sdk_loader
+        self._settings_provider = settings_provider or get_ai_settings
         self._sdk_module: Any | None = None
         self._model_client: Any | None = None
         self._logger = logger or logging.getLogger(__name__)
@@ -76,13 +74,13 @@ class GeminiClient:
     def get_configuration_status(self) -> tuple[bool, str]:
         """Return a lightweight health snapshot without calling the external API."""
 
-        model = self._resolve_model()
         try:
             self._resolve_api_key()
+            model = self._resolve_model()
             self._resolve_temperature()
             self._resolve_max_output_tokens()
         except AIConfigurationError:
-            return False, model
+            return False, self._fallback_model_name()
         return True, model
 
     def build_request(
@@ -175,14 +173,20 @@ class GeminiClient:
         self._resolve_max_output_tokens()
 
     def _resolve_api_key(self) -> str:
-        api_key = self._api_key or os.getenv("GEMINI_API_KEY", "")
+        api_key = (
+            self._api_key
+            if self._api_key is not None
+            else self._settings().gemini_api_key
+        )
         api_key = api_key.strip()
         if not api_key:
             raise AIConfigurationError("GEMINI_API_KEY is not configured.")
         return api_key
 
     def _resolve_model(self) -> str:
-        model = self._model or os.getenv("GEMINI_MODEL", _DEFAULT_GEMINI_MODEL)
+        model = (
+            self._model if self._model is not None else self._settings().gemini_model
+        )
         model = model.strip()
         if not model:
             raise AIConfigurationError("GEMINI_MODEL is invalid.")
@@ -192,7 +196,7 @@ class GeminiClient:
         value: Any = (
             self._temperature
             if self._temperature is not None
-            else os.getenv("TEMPERATURE", str(_DEFAULT_TEMPERATURE))
+            else self._settings().temperature
         )
         try:
             temperature = float(value)
@@ -207,7 +211,7 @@ class GeminiClient:
         value: Any = (
             self._max_output_tokens
             if self._max_output_tokens is not None
-            else os.getenv("MAX_OUTPUT_TOKENS", str(_DEFAULT_MAX_OUTPUT_TOKENS))
+            else self._settings().max_output_tokens
         )
         try:
             max_tokens = int(value)
@@ -219,6 +223,25 @@ class GeminiClient:
         if max_tokens <= 0:
             raise AIConfigurationError("MAX_OUTPUT_TOKENS must be greater than zero.")
         return max_tokens
+
+    def _settings(self) -> AISettings:
+        """Retrieve validated AI settings from the single configuration source."""
+
+        try:
+            return self._settings_provider()
+        except SettingsLoadError as exc:
+            raise AIConfigurationError(str(exc)) from exc
+        except AIConfigurationError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive adapter
+            raise AIConfigurationError("Failed to load AI settings.") from exc
+
+    @staticmethod
+    def _fallback_model_name() -> str:
+        """Return configured default model name from AI settings schema."""
+
+        default_model = AISettings.model_fields["gemini_model"].default
+        return str(default_model)
 
     @staticmethod
     def _default_sdk_loader() -> Any:

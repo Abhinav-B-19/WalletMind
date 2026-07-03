@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.core.config import get_ai_settings
-from backend.app.services.ai.exceptions import AIConfigurationError
+from backend.app.core.config import SettingsLoadError, get_ai_settings
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache() -> None:
+    get_ai_settings.cache_clear()
 
 
 def test_get_ai_settings_valid(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -21,9 +25,9 @@ def test_get_ai_settings_valid(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_ai_settings_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "")
 
-    with pytest.raises(AIConfigurationError, match="GEMINI_API_KEY"):
+    with pytest.raises(SettingsLoadError, match="Invalid or missing Gemini"):
         get_ai_settings()
 
 
@@ -31,7 +35,7 @@ def test_get_ai_settings_invalid_types(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "key-123")
     monkeypatch.setenv("TEMPERATURE", "not-a-float")
 
-    with pytest.raises(AIConfigurationError, match="type"):
+    with pytest.raises(SettingsLoadError, match="Invalid or missing Gemini"):
         get_ai_settings()
 
 
@@ -39,5 +43,5 @@ def test_get_ai_settings_invalid_ranges(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("GEMINI_API_KEY", "key-123")
     monkeypatch.setenv("TEMPERATURE", "3.5")
 
-    with pytest.raises(AIConfigurationError, match="Invalid AI configuration values"):
+    with pytest.raises(SettingsLoadError, match="Invalid or missing Gemini"):
         get_ai_settings()

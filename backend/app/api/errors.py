@@ -7,10 +7,18 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from backend.app.services.ai.exceptions import (
+    AIConfigurationError,
+    AIRateLimitError,
+    AIResponseError,
+    AIServiceError,
+)
 from walletmind.exceptions import (
     DuplicateUserError,
     EmptyFileError,
     FileTooLargeError,
+    NoTransactionsForStatementError,
+    StatementInsightsError,
     StatementNotFoundError,
     StatementStorageError,
     UnsupportedFileTypeError,
@@ -126,6 +134,90 @@ def register_error_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "code": "STATEMENT_STORAGE_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(NoTransactionsForStatementError)
+    async def no_transactions_handler(
+        request: Request, exc: NoTransactionsForStatementError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "code": "EMPTY_STATEMENT",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIConfigurationError)
+    async def ai_configuration_handler(
+        request: Request, exc: AIConfigurationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "code": "AI_CONFIGURATION_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIRateLimitError)
+    async def ai_rate_limit_handler(
+        request: Request, exc: AIRateLimitError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "success": False,
+                "code": "AI_RATE_LIMIT",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIResponseError)
+    async def ai_response_error_handler(
+        request: Request, exc: AIResponseError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "success": False,
+                "code": "AI_RESPONSE_INVALID",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIServiceError)
+    async def ai_service_error_handler(
+        request: Request, exc: AIServiceError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=504,
+            content={
+                "success": False,
+                "code": "AI_TIMEOUT_OR_SERVICE_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(StatementInsightsError)
+    async def statement_insights_handler(
+        request: Request, exc: StatementInsightsError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "code": "STATEMENT_INSIGHTS_ERROR",
                 "message": str(exc),
                 "details": None,
             },

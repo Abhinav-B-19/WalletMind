@@ -5,6 +5,9 @@ from __future__ import annotations
 from fastapi import Request
 
 from backend.app.services.ai.ai_service import AIService
+from backend.app.services.analysis.spending_insights_service import (
+    SpendingInsightsService,
+)
 from walletmind.services.processing_dispatcher import ProcessingDispatcher
 from walletmind.services.statement_upload_service import StatementUploadService
 from walletmind.services.transaction_service import TransactionService
@@ -39,3 +42,9 @@ def get_ai_service(request: Request) -> AIService:
     """Return the app-scoped AI service instance."""
 
     return request.app.state.ai_service
+
+
+def get_spending_insights_service(request: Request) -> SpendingInsightsService:
+    """Return the app-scoped spending insights service instance."""
+
+    return request.app.state.spending_insights_service

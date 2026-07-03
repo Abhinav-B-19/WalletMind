@@ -35,3 +35,11 @@ class FileTooLargeError(StatementUploadError):
 
 class StatementStorageError(StatementUploadError):
     """Raised when storage persistence operations fail."""
+
+
+class NoTransactionsForStatementError(StatementUploadError):
+    """Raised when a statement has no transactions for downstream analysis."""
+
+
+class StatementInsightsError(WalletMindError):
+    """Raised when AI insights generation fails."""

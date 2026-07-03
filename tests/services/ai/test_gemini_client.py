@@ -44,6 +44,21 @@ class FakeSDKModule:
         return self.model_client
 
 
+class StubSettings:
+    def __init__(
+        self,
+        *,
+        gemini_api_key: str = "stub-key",
+        gemini_model: str = "gemini-2.5-flash",
+        temperature: float = 0.2,
+        max_output_tokens: int = 1024,
+    ) -> None:
+        self.gemini_api_key = gemini_api_key
+        self.gemini_model = gemini_model
+        self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
+
+
 def _make_success_response() -> Any:
     usage_metadata = SimpleNamespace(
         prompt_token_count=7,
@@ -58,9 +73,7 @@ def _make_success_response() -> Any:
     )
 
 
-def test_gemini_client_initializes_lazily(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GEMINI_API_KEY", "env-key")
-
+def test_gemini_client_initializes_lazily() -> None:
     load_calls = {"count": 0}
     sdk_module = FakeSDKModule(
         model_client=FakeModelClient(response=_make_success_response())
@@ -70,7 +83,10 @@ def test_gemini_client_initializes_lazily(monkeypatch: pytest.MonkeyPatch) -> No
         load_calls["count"] += 1
         return sdk_module
 
-    client = GeminiClient(sdk_loader=_loader)
+    client = GeminiClient(
+        sdk_loader=_loader,
+        settings_provider=lambda: StubSettings(gemini_api_key="env-key"),
+    )
 
     assert load_calls["count"] == 0
 
@@ -85,7 +101,7 @@ def test_gemini_client_initializes_lazily(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert load_calls["count"] == 1
     assert sdk_module.configure_api_key == "env-key"
-    assert sdk_module.model_name == "gemini-1.5-flash"
+    assert sdk_module.model_name == "gemini-2.5-flash"
     assert response.text == "Generated answer"
     assert response.total_tokens == 18
 
@@ -203,4 +219,4 @@ def test_configuration_status_handles_missing_api_key() -> None:
     configured, model = client.get_configuration_status()
 
     assert configured is False
-    assert model == "gemini-1.5-flash"
+    assert model == "gemini-2.5-flash"
