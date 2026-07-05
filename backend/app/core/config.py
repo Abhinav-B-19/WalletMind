@@ -35,13 +35,20 @@ class AppSettings(BaseSettings):
     )
 
 
+def _parse_allowed_origins(value: str) -> list[str]:
+    """Parse comma-separated origins and normalize whitespace/trailing slashes."""
+
+    origins = [origin.strip().rstrip("/") for origin in value.split(",")]
+    return [origin for origin in origins if origin]
+
+
 try:
     settings = AppSettings()
 except Exception as exc:
     raise SettingsLoadError("Invalid or missing application configuration.") from exc
 
 DATABASE_URL: Final[str] = settings.database_url
-ALLOWED_ORIGINS: Final[list[str]] = settings.allowed_origins.split(",")
+ALLOWED_ORIGINS: Final[list[str]] = _parse_allowed_origins(settings.allowed_origins)
 
 
 def get_ai_settings() -> AppSettings:

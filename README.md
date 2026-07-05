@@ -175,3 +175,94 @@ npm run build
 ## License
 
 This project is licensed under the terms in `LICENSE`.
+
+## Deployment
+
+This repository supports a production split deployment:
+
+- Backend API on Render
+- Frontend SPA on Vercel
+- PostgreSQL on Neon
+
+### Neon Deployment
+
+1. Create a Neon project and database.
+2. Copy the full PostgreSQL connection string.
+3. Set `DATABASE_URL` in Render backend environment variables.
+
+### Render Deployment (Backend)
+
+This repository includes a Render Blueprint in `render.yaml` with:
+
+- Service name: `walletmind-api`
+- Environment: Python
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
+- Health check: `GET /`
+- Auto deploy: enabled
+
+Required backend environment variables on Render:
+
+- `DATABASE_URL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `TEMPERATURE`
+- `MAX_OUTPUT_TOKENS`
+- `ALLOWED_ORIGINS`
+
+Recommended `ALLOWED_ORIGINS` example:
+
+```env
+ALLOWED_ORIGINS=https://walletmind.vercel.app
+```
+
+### Vercel Deployment (Frontend)
+
+The frontend includes `frontend/vercel.json` with SPA rewrites so deep-link refresh works for routes like:
+
+- `/app/home`
+- `/app/chat`
+- `/app/settings`
+
+Required frontend environment variables on Vercel:
+
+- `VITE_API_BASE_URL` (Render backend URL, no trailing slash)
+- `VITE_APP_VERSION`
+- `VITE_BUILD_DATE`
+- `VITE_GIT_COMMIT`
+
+Example:
+
+```env
+VITE_API_BASE_URL=https://walletmind-api.onrender.com
+VITE_APP_VERSION=0.1.0
+VITE_BUILD_DATE=2026-07-05
+VITE_GIT_COMMIT=<git-sha>
+```
+
+### Deployment Order
+
+1. Provision Neon and copy `DATABASE_URL`.
+2. Deploy backend on Render with required environment variables.
+3. Confirm backend health endpoint responds at `GET /`.
+4. Deploy frontend on Vercel with `VITE_API_BASE_URL` pointing to Render.
+5. Set backend `ALLOWED_ORIGINS` to the final Vercel domain.
+6. Re-deploy backend to apply CORS origin updates.
+
+### Common Troubleshooting
+
+- Deep route refresh returns 404 on Vercel:
+	- Ensure `frontend/vercel.json` is present and active in deployment output.
+- CORS blocked in browser:
+	- Verify `ALLOWED_ORIGINS` exactly matches frontend origin.
+	- Avoid protocol mismatch (`http` vs `https`).
+- Backend starts locally but fails on Render:
+	- Confirm `DATABASE_URL` and `GEMINI_API_KEY` are set.
+- Frontend can load but API requests fail:
+	- Verify `VITE_API_BASE_URL` targets Render backend URL.
+
+### Live Demo Placeholders
+
+- Frontend URL: `<vercel-frontend-url>`
+- Backend URL: `<render-backend-url>`
+- API docs: `<render-backend-url>/docs`
