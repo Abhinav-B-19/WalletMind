@@ -257,6 +257,7 @@ describe("statements api contract", () => {
     expect(formData.get("file")).toBe(file);
 
     expect(requestConfig).not.toHaveProperty("headers");
+    expect(requestConfig).toMatchObject({ timeout: 180_000 });
   });
 
   it("reports exact field path when transaction payload mismatches schema", async () => {

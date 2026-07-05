@@ -200,6 +200,7 @@ export async function uploadStatement({
 
   try {
     const response = await apiClient.post("/statements/upload", formData, {
+      timeout: 180_000,
       onUploadProgress: (event) => {
         if (!onUploadProgress || !event.total) {
           return;
