@@ -6,6 +6,7 @@ uvicorn>=0.30.0
 python-multipart>=0.0.9
 google-generativeai>=0.8.0
 pydantic-settings>=2.4.0
+psycopg[binary]>=3.2
 
 # Development tooling
 black>=24.0

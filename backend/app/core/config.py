@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Final
+import os
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,7 +12,14 @@ PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 STORAGE_DIR: Final[Path] = PROJECT_ROOT / "storage"
 DATABASE_DIR: Final[Path] = STORAGE_DIR / "database"
 DATABASE_FILE: Final[Path] = DATABASE_DIR / "walletmind.db"
-DATABASE_URL: Final[str] = f"sqlite:///{DATABASE_FILE.as_posix()}"
+DATABASE_URL: Final[str] = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{DATABASE_FILE.as_posix()}",
+)
+ALLOWED_ORIGINS: Final[list[str]] = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173",
+).split(",")
 SQLITE_CONNECT_ARGS: Final[dict[str, bool]] = {"check_same_thread": False}
 
 
