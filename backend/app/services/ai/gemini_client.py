@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from backend.app.core.config import AISettings, SettingsLoadError, get_ai_settings
+from backend.app.core.config import AppSettings, SettingsLoadError, get_ai_settings
 from backend.app.services.ai.exceptions import (
     AIConfigurationError,
     AIRateLimitError,
@@ -30,7 +30,7 @@ class GeminiClient:
         temperature: float | None = None,
         max_output_tokens: int | None = None,
         sdk_loader: Callable[[], Any] | None = None,
-        settings_provider: Callable[[], AISettings] | None = None,
+        settings_provider: Callable[[], AppSettings] | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the client with optional explicit configuration overrides."""
@@ -283,7 +283,7 @@ class GeminiClient:
             raise AIConfigurationError("MAX_OUTPUT_TOKENS must be greater than zero.")
         return max_tokens
 
-    def _settings(self) -> AISettings:
+    def _settings(self) -> AppSettings:
         """Retrieve validated AI settings from the single configuration source."""
 
         try:
@@ -299,7 +299,7 @@ class GeminiClient:
     def _fallback_model_name() -> str:
         """Return configured default model name from AI settings schema."""
 
-        default_model = AISettings.model_fields["gemini_model"].default
+        default_model = AppSettings.model_fields["gemini_model"].default
         return str(default_model)
 
     @staticmethod

@@ -1,9 +1,7 @@
 """Core configuration values for the WalletMind backend."""
 
-from functools import lru_cache
 from pathlib import Path
 from typing import Final
-import os
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,14 +10,6 @@ PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 STORAGE_DIR: Final[Path] = PROJECT_ROOT / "storage"
 DATABASE_DIR: Final[Path] = STORAGE_DIR / "database"
 DATABASE_FILE: Final[Path] = DATABASE_DIR / "walletmind.db"
-DATABASE_URL: Final[str] = os.getenv(
-    "DATABASE_URL",
-    f"sqlite:///{DATABASE_FILE.as_posix()}",
-)
-ALLOWED_ORIGINS: Final[list[str]] = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173",
-).split(",")
 SQLITE_CONNECT_ARGS: Final[dict[str, bool]] = {"check_same_thread": False}
 
 
@@ -27,8 +17,11 @@ class SettingsLoadError(Exception):
     """Raised when AI settings are invalid or missing."""
 
 
-class AISettings(BaseSettings):
-    """Validated AI configuration loaded from environment variables."""
+class AppSettings(BaseSettings):
+    """Validated application configuration loaded from environment variables."""
+
+    database_url: str = Field(default=f"sqlite:///{DATABASE_FILE.as_posix()}")
+    allowed_origins: str = Field(default="http://localhost:5173")
 
     gemini_api_key: str = Field(..., min_length=1)
     gemini_model: str = Field(default="gemini-2.5-flash", min_length=1)
@@ -42,8 +35,16 @@ class AISettings(BaseSettings):
     )
 
 
-@lru_cache
-def get_ai_settings() -> AISettings:
+try:
+    settings = AppSettings()
+except Exception as exc:
+    raise SettingsLoadError("Invalid or missing application configuration.") from exc
+
+DATABASE_URL: Final[str] = settings.database_url
+ALLOWED_ORIGINS: Final[list[str]] = settings.allowed_origins.split(",")
+
+
+def get_ai_settings() -> AppSettings:
     """
     Load and validate AI configuration.
 
@@ -51,7 +52,7 @@ def get_ai_settings() -> AISettings:
         SettingsLoadError: If the configuration is invalid or missing.
     """
     try:
-        return AISettings()
+        return settings
     except Exception as exc:
         raise SettingsLoadError(
             "Invalid or missing Gemini AI configuration."
