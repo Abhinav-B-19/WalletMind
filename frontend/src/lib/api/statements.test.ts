@@ -205,6 +205,60 @@ describe("statements api contract", () => {
     );
   });
 
+  it("sends original File through FormData without overriding multipart headers", async () => {
+    const postMock = vi.mocked(apiClient.post);
+    postMock.mockResolvedValue({
+      data: {
+        success: true,
+        message: "Statement uploaded successfully.",
+        data: {
+          statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+          stored_file_path: "/tmp/stored.csv",
+          original_filename: "statement.csv",
+          stored_filename: "stored.csv",
+          file_size: 77,
+          file_type: "csv",
+          parser_type: "csv",
+          bank_name: null,
+          classification_confidence: 0.88,
+          classification_method: "header-keyword",
+          classified_at: "2026-07-03T09:00:01.000Z",
+          parsed_transaction_count: 1,
+          failed_transaction_count: 0,
+          parsed_at: "2026-07-03T09:00:02.000Z",
+          direction_corrections: 2,
+          analysis_status: "ready_for_analysis",
+          status: "ready_for_analysis",
+          uploaded_at: "2026-07-03T09:00:00.000Z",
+        },
+      },
+    });
+
+    const file = new File(["a,b\n1,2"], "statement.csv", {
+      type: "text/csv",
+    });
+
+    await uploadStatement({
+      userUuid: "f7ed2559-7ec3-4433-b9e4-af8ca6adf72b",
+      file,
+    });
+
+    expect(postMock).toHaveBeenCalledTimes(1);
+    const [requestUrl, requestBody, requestConfig] =
+      postMock.mock.calls[0] ?? [];
+
+    expect(requestUrl).toBe("/statements/upload");
+    expect(requestBody).toBeInstanceOf(FormData);
+
+    const formData = requestBody as FormData;
+    expect(formData.get("user_uuid")).toBe(
+      "f7ed2559-7ec3-4433-b9e4-af8ca6adf72b",
+    );
+    expect(formData.get("file")).toBe(file);
+
+    expect(requestConfig).not.toHaveProperty("headers");
+  });
+
   it("reports exact field path when transaction payload mismatches schema", async () => {
     const getMock = vi.mocked(apiClient.get);
     getMock.mockResolvedValue({

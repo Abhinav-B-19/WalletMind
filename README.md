@@ -252,14 +252,14 @@ VITE_GIT_COMMIT=<git-sha>
 ### Common Troubleshooting
 
 - Deep route refresh returns 404 on Vercel:
-	- Ensure `frontend/vercel.json` is present and active in deployment output.
+  - Ensure `frontend/vercel.json` is present and active in deployment output.
 - CORS blocked in browser:
-	- Verify `ALLOWED_ORIGINS` exactly matches frontend origin.
-	- Avoid protocol mismatch (`http` vs `https`).
+  - Verify `ALLOWED_ORIGINS` exactly matches frontend origin.
+  - Avoid protocol mismatch (`http` vs `https`).
 - Backend starts locally but fails on Render:
-	- Confirm `DATABASE_URL` and `GEMINI_API_KEY` are set.
+  - Confirm `DATABASE_URL` and `GEMINI_API_KEY` are set.
 - Frontend can load but API requests fail:
-	- Verify `VITE_API_BASE_URL` targets Render backend URL.
+  - Verify `VITE_API_BASE_URL` targets Render backend URL.
 
 ### Live Demo Placeholders
 

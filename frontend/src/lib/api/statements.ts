@@ -200,9 +200,6 @@ export async function uploadStatement({
 
   try {
     const response = await apiClient.post("/statements/upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
       onUploadProgress: (event) => {
         if (!onUploadProgress || !event.total) {
           return;
