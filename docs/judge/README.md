@@ -65,7 +65,6 @@ High-level flow:
 - [Architecture + Diagrams](./ARCHITECTURE.md)
 - [Rubric Mapping](./RUBRIC_MAPPING.md)
 - [API Examples](./API_EXAMPLES.md)
-- [Judge Checklist](./JUDGE_CHECKLIST.md)
 - [Evaluation Summary Cheat Sheet](./EVALUATION_SUMMARY.md)
 - [Required Screenshot List](../screenshots/README.md)
 

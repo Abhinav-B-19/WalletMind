@@ -119,7 +119,6 @@ Detailed judge-friendly architecture and diagrams: `docs/judge/ARCHITECTURE.md`.
 - Architecture + Diagrams: `docs/judge/ARCHITECTURE.md`
 - Rubric Mapping: `docs/judge/RUBRIC_MAPPING.md`
 - API Examples: `docs/judge/API_EXAMPLES.md`
-- Judge Checklist: `docs/judge/JUDGE_CHECKLIST.md`
 - Evaluation Summary: `docs/judge/EVALUATION_SUMMARY.md`
 
 ## Deployment
