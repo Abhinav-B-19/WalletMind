@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
-
-import pytest
 
 from backend.app.adk.runner import WalletMindRunner
 
@@ -28,11 +27,12 @@ class FakeRunner:
     async def run_async(self, *, user_id, session_id, new_message):
         _ = (user_id, session_id, new_message)
         yield SimpleNamespace(content=SimpleNamespace(text="hello"))
-        yield SimpleNamespace(content=SimpleNamespace(parts=[SimpleNamespace(text="world")]))
+        yield SimpleNamespace(
+            content=SimpleNamespace(parts=[SimpleNamespace(text="world")])
+        )
 
 
-@pytest.mark.asyncio
-async def test_runner_ensures_session_and_returns_structured_result():
+def test_runner_ensures_session_and_returns_structured_result():
     service = FakeSessionService()
     runner = WalletMindRunner(
         runner=FakeRunner(),
@@ -40,10 +40,12 @@ async def test_runner_ensures_session_and_returns_structured_result():
         app_name="walletmind",
     )
 
-    result = await runner.run(
-        user_id="user-1",
-        session_id="session-1",
-        message="ping",
+    result = asyncio.run(
+        runner.run(
+            user_id="user-1",
+            session_id="session-1",
+            message="ping",
+        )
     )
 
     assert result.user_id == "user-1"
