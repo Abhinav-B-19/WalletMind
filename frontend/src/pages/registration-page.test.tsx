@@ -82,6 +82,6 @@ describe("RegistrationPage", () => {
       currency: "INR",
       primary_financial_goal: "Build Emergency Fund",
     });
-    expect(navigateMock).toHaveBeenCalledWith("/app/home", { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith("/app/judge", { replace: true });
   });
 });

@@ -17,6 +17,7 @@ import { AppSettingsPage } from "@/pages/app-settings-page";
 import { AppStatementUploadPage } from "@/pages/app-statement-upload-page";
 import { AppStatementsPage } from "@/pages/app-statements-page";
 import { HomePage } from "@/pages/landing-page";
+import { JudgeHubPage } from "@/pages/judge-hub-page";
 import { LoginPage } from "@/pages/login-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { RegistrationPage } from "@/pages/registration-page";
@@ -59,7 +60,8 @@ export const appRoutes = createRoutesFromElements(
         </ProtectedRoute>
       }
     >
-      <Route index element={<Navigate to="home" replace />} />
+      <Route index element={<Navigate to="judge" replace />} />
+      <Route path="judge" element={<JudgeHubPage />} />
       <Route path="home" element={<WorkspacePage />} />
       <Route path="agent-playground" element={<AppAgentPlaygroundPage />} />
       <Route path="statements" element={<AppStatementsPage />} />
@@ -77,6 +79,8 @@ export const appRoutes = createRoutesFromElements(
       path="/agent-playground"
       element={<Navigate to="/app/agent-playground" replace />}
     />
+
+    <Route path="/judge" element={<Navigate to="/app/judge" replace />} />
 
     <Route path="*" element={<NotFoundPage />} />
   </>,

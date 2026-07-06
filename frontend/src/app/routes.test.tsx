@@ -432,4 +432,42 @@ describe("routing", () => {
       screen.getByRole("link", { name: "Get Started" }),
     ).toBeInTheDocument();
   });
+
+  it("judge hub route redirects unauthenticated user to landing", async () => {
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/judge"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "WalletMind" }),
+    ).toBeInTheDocument();
+  });
+
+  it("judge hub loads with shared app layout for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/app/judge"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "WalletMind Judge Hub" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Judge Hub" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
+  });
 });

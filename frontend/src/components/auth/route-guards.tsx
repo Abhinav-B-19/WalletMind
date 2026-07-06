@@ -5,7 +5,7 @@ import { hasStoredUser } from "@/lib/auth/storage";
 
 export function PublicOnlyRoute({ children }: PropsWithChildren) {
   if (hasStoredUser()) {
-    return <Navigate to="/app/home" replace />;
+    return <Navigate to="/app/judge" replace />;
   }
 
   return children;

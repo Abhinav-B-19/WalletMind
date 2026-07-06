@@ -27,7 +27,10 @@ describe("App Shell", () => {
       await screen.findByRole("link", { name: "Get Started" }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("link", { name: "Open Workspace" }),
+      await screen.findByRole("link", { name: "Already have a profile?" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Judge Experience" }),
     ).toBeInTheDocument();
   });
 });

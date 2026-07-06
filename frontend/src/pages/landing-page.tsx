@@ -152,7 +152,10 @@ export function HomePage() {
                 <Link to="/register">Get Started</Link>
               </Button>
               <Button asChild variant="secondary">
-                <Link to="/login">Open Workspace</Link>
+                <Link to="/login">Already have a profile?</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/app/judge">Judge Experience</Link>
               </Button>
             </div>
 

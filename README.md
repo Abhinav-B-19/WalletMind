@@ -138,6 +138,7 @@ Repository includes deployment references in `render.yaml`, `frontend/vercel.jso
 ## License
 
 This project is licensed under `LICENSE`.
+
 - Frontend can load but API requests fail:
   - Verify `VITE_API_BASE_URL` targets Render backend URL.
 

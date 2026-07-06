@@ -68,7 +68,7 @@ export function RegistrationPage() {
     try {
       const user = await submitRegistration(formData);
       setStoredUser(user);
-      navigate("/app/home", { replace: true });
+      navigate("/app/judge", { replace: true });
     } catch (error) {
       setSubmitError(
         error instanceof Error

@@ -6,6 +6,7 @@ import {
   Home,
   LogOut,
   PiggyBank,
+  Scale,
   Settings,
   Sparkles,
   Timer,
@@ -29,6 +30,12 @@ const links = [
     to: "/app/agent-playground",
     label: "🤖 Agent Playground",
     icon: Bot,
+    comingSoon: false,
+  },
+  {
+    to: "/app/judge",
+    label: "Judge Hub",
+    icon: Scale,
     comingSoon: false,
   },
   {

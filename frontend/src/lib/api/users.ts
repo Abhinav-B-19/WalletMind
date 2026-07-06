@@ -6,10 +6,13 @@ import type { RegistrationFormData } from "@/types";
 const userDataSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  email: z.string().email().nullable().optional(),
   occupation: z.string(),
   monthly_income: z.number(),
   currency: z.string(),
   primary_financial_goal: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
 });
 
 const userEnvelopeSchema = z.object({
