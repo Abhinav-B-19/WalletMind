@@ -160,13 +160,13 @@ Result: core regression and orchestration suites pass with no business logic mov
 
 ## 9. Submission Mapping
 
-| Rubric Requirement | WalletMind Implementation |
-| --- | --- |
-| Agent / Multi-Agent | CoordinatorAgent + Specialized ADK Agents |
-| MCP | Planned for Sprint 2 using existing tool/agent contracts |
-| Deployability | Render + Vercel + Neon architecture path |
-| Security | Server-side Gemini, input validation, env vars, no client key exposure |
-| Agent Skills | ADK Runner, ADK Workflow, Coordinator, Function Tools |
+| Rubric Requirement  | WalletMind Implementation                                              |
+| ------------------- | ---------------------------------------------------------------------- |
+| Agent / Multi-Agent | CoordinatorAgent + Specialized ADK Agents                              |
+| MCP                 | Planned for Sprint 2 using existing tool/agent contracts               |
+| Deployability       | Render + Vercel + Neon architecture path                               |
+| Security            | Server-side Gemini, input validation, env vars, no client key exposure |
+| Agent Skills        | ADK Runner, ADK Workflow, Coordinator, Function Tools                  |
 
 ## 10. Architecture Highlights
 

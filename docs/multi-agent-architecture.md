@@ -64,9 +64,9 @@ Examples:
 
 - If `inputs.statement_uuid` exists, it is used directly.
 - If missing, WalletMind resolves the most recent processed statement through
-    existing `StatementUploadService` methods (no direct database access).
+  existing `StatementUploadService` methods (no direct database access).
 - If multiple processed statements exist, the API returns a structured 422
-    validation response listing selectable candidates.
+  validation response listing selectable candidates.
 - Coordinator execution does not silently guess statement selection.
 
 ## Decision Record
