@@ -1,50 +1,151 @@
 # WalletMind
 
-WalletMind is an AI-first financial intelligence platform that turns raw bank statements into explainable financial outcomes in minutes.
+AI-powered Personal Financial Intelligence Platform
 
-It combines deterministic financial computation with multi-agent orchestration, Google ADK function tooling, and MCP interoperability.
+![Google ADK](https://img.shields.io/badge/Google%20ADK-Multi--Agent-blue)
+![Model Context Protocol](https://img.shields.io/badge/MCP-Enabled-0ea5e9)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-059669)
+![React](https://img.shields.io/badge/React-Frontend-2563eb)
+![TypeScript](https://img.shields.io/badge/TypeScript-UI-1d4ed8)
+![Python](https://img.shields.io/badge/Python-Backend-16a34a)
+![Google Gemini](https://img.shields.io/badge/Gemini-Reasoning-f59e0b)
+![License: MIT](https://img.shields.io/badge/License-MIT-10b981)
 
-## Architecture Image
+WalletMind transforms raw bank statements into explainable financial intelligence using a coordinator-led multi-agent architecture built with Google ADK and exposed through both REST and MCP.
 
-![WalletMind Architecture Overview](assets/diagrams/walletmind-architecture-overview.png)
+## System Architecture
 
-## Feature Screenshots
+![WalletMind Architecture](assets/diagrams/walletmind-architecture-overview.png)
 
-Core product screenshots:
+Architecture highlights:
 
-- Landing Page: `assets/screenshots/landing-page.png`
-- Dashboard: `assets/screenshots/dashboard.png`
-- Upload: `assets/screenshots/upload.png`
-- Agent Playground: `assets/screenshots/agent-playground.png`
-- Coordinator Timeline: `assets/screenshots/coordinator-timeline.png`
-- Financial Health: `assets/screenshots/health-card.png`
-- Budget Recommendations: `assets/screenshots/budget-card.png`
-- Spending Insights: `assets/screenshots/insights-card.png`
-- Monthly Report: `assets/screenshots/report-card.png`
-- AI Assistant: `assets/screenshots/assistant-card.png`
-- REST Swagger: `assets/screenshots/swagger-rest.png`
-- MCP Swagger: `assets/screenshots/swagger-mcp.png`
+- Coordinator for intent routing and orchestration strategy.
+- Agent Registry for capability-to-agent discovery.
+- Specialized agents for health, insights, budget, report, assistant, and processing.
+- ADK Function Tools as deterministic execution boundaries.
+- Shared WalletMind service layer as the single source of business logic.
+- REST APIs for product workflows and MCP endpoints for AI-host interoperability.
+- Persistent storage through SQLAlchemy-backed data models.
 
-Required judge screenshot checklist is documented at `docs/screenshots/README.md`.
+## Product Preview
 
-## Demo Assets
+### Landing Page
 
-This repository currently ships static PNG screenshots for judge validation.
-Animated demo GIFs can be added later under `assets/screenshots/`.
+![Landing Page](assets/screenshots/landing-page.png)
 
-## Project Overview
+### Dashboard
 
-WalletMind workflow:
+![Dashboard](assets/screenshots/dashboard.png)
 
-1. Upload and process statement files.
-2. Normalize transactions into a consistent schema.
-3. Run health score, insights, budget, and report engines.
-4. Route analysis through coordinator-led single or multi-agent execution.
-5. Present transparent outputs in dashboard cards and execution timelines.
+### Statement Upload
+
+![Statement Upload](assets/screenshots/upload.png)
+
+### Agent Playground
+
+![Agent Playground](assets/screenshots/agent-playground.png)
+
+### Judge Hub
+
+![Judge Hub](assets/screenshots/judge-hub.png)
+
+### Execution Timeline
+
+![Execution Timeline](assets/screenshots/coordinator-timeline.png)
+
+### Financial Health
+
+![Financial Health](assets/screenshots/health-card.png)
+
+### Budget
+
+![Budget](assets/screenshots/budget-card.png)
+
+### Insights
+
+![Insights](assets/screenshots/insights-card.png)
+
+### Monthly Report
+
+![Monthly Report](assets/screenshots/report-card.png)
+
+### AI Assistant
+
+![AI Assistant](assets/screenshots/assistant-card.png)
+
+### REST Swagger
+
+![REST Swagger](assets/screenshots/swagger-rest.png)
+
+### MCP Swagger
+
+![MCP Swagger](assets/screenshots/swagger-mcp.png)
+
+## Why WalletMind?
+
+Traditional finance apps visualize historical transactions. WalletMind reasons about finances.
+
+- Coordinator-led orchestration routes each request to the right capability mix.
+- Multi-agent execution decomposes complex financial analysis into specialized tasks.
+- Deterministic tools keep outputs auditable and grounded in real statement data.
+- Explainable recommendations show decision traces, not opaque answers.
+- REST + MCP enable both product UX and standards-based AI-host integration.
+
+## Key Features
+
+- [x] Google ADK multi-agent system
+- [x] Coordinator Agent orchestration layer
+- [x] Specialized domain agents
+- [x] Agent Registry discovery model
+- [x] Function Tool execution boundary
+- [x] Standalone MCP server
+- [x] Versioned REST APIs
+- [x] Agent Playground with timeline
+- [x] Judge Hub navigation experience
+- [x] Explainable financial analysis
+- [x] Budget recommendations
+- [x] Monthly financial reports
+- [x] Retrieval-grounded AI Assistant
+
+## Google AI Agents Concepts Demonstrated
+
+| Concept | Implementation |
+| --- | --- |
+| Google ADK | Coordinator + specialized ADK agents |
+| Multi-Agent | Coordinator capability routing and aggregation |
+| Function Tools | WalletMind Function Tool layer in `backend/app/tools/` |
+| MCP | Standalone MCP server + adapter + registry |
+| Shared Services | Single source of business logic in WalletMind services |
+| Explainability | Decision records, timeline traces, and per-agent outputs |
+
+## AI Execution Flow
+
+```mermaid
+flowchart TD
+	U[User Query] --> C[Coordinator Agent]
+	C --> D[Capability Discovery]
+	D --> A[Specialized Agents]
+	A --> T[ADK Function Tools]
+	T --> S[WalletMind Services]
+	S --> DB[(Database)]
+```
+
+## Technology Stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Frontend | React + TypeScript + Vite | Interactive financial product UX |
+| State/Data | React Query + Axios | Async API state and request orchestration |
+| Backend API | FastAPI + Pydantic | Versioned API contracts and validation |
+| Persistence | SQLAlchemy | Statement, transaction, and analysis storage |
+| AI Runtime | Google ADK + Gemini | Planner-driven agent reasoning |
+| Tool Boundary | ADK FunctionTool | Deterministic service invocation contracts |
+| Protocol Interop | Model Context Protocol (MCP) | Tool discovery and execution for AI hosts |
+| Testing | Pytest + Vitest + Testing Library | Backend and frontend quality gates |
 
 ## Quick Start
 
-### 1. Backend
+### Backend
 
 ```bash
 python -m venv .venv
@@ -55,7 +156,7 @@ python -m backend.app.main
 
 Backend: `http://127.0.0.1:8000`
 
-### 2. Frontend
+### Frontend
 
 ```bash
 cd frontend
@@ -63,9 +164,9 @@ npm install
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Frontend: `http://127.0.0.1:5173`
 
-### 3. MCP Server
+### MCP
 
 ```bash
 cd ..
@@ -75,79 +176,50 @@ python -m backend.app.mcp.server
 
 MCP: `http://127.0.0.1:8100`
 
-For the full judge flow, use `docs/judge/QUICK_START.md`.
+### Swagger
 
-## Project Structure
+- REST Swagger: `http://127.0.0.1:8000/docs`
+- MCP Swagger: `http://127.0.0.1:8100/docs`
 
-```text
-backend/                  FastAPI APIs, agents, ADK runtime, MCP server, tools
-frontend/                 React UI, dashboard, assistant, agent playground
-walletmind/               Shared domain logic and services
-tests/                    Backend validation suites
-docs/                     Architecture, implementation, deployment, judge pack
-assets/                   Branding, diagrams, screenshots, notebook assets
-sample_data/              Demo statement files for quick evaluation
-storage/                  Runtime db/uploads/cache/session artifacts
-```
+### Agent Playground
 
-## Technology Stack
+- `http://127.0.0.1:5173/app/agent-playground`
 
-- Frontend: React, TypeScript, Vite, React Query, Tailwind.
-- Backend: FastAPI, Pydantic, SQLAlchemy.
-- AI Runtime: Google Gemini + Google ADK.
-- Agent Tooling: ADK FunctionTool-based wrappers.
-- Protocol Layer: Standalone MCP infrastructure server.
-- Testing: Pytest, Vitest, Testing Library.
+### Judge Hub
 
-## AI Architecture
+- `http://127.0.0.1:5173/app/judge`
 
-WalletMind AI architecture centers on coordinator-orchestrated execution:
+## Demo Flow
 
-- `CoordinatorAgent` as orchestration control plane.
-- Specialized agents for health, insights, budget, report, assistant, and processing.
-- ADK Function Tools as deterministic boundaries to domain services.
-- MCP adapter and registry exposing capabilities through `/mcp/*` APIs.
-- Shared service layer for business logic reuse across REST and MCP.
+1. Upload Statement
+2. Dashboard
+3. Agent Playground
+4. Coordinator Decision
+5. Execution Timeline
+6. Judge Hub
+7. REST Swagger
+8. MCP Swagger
 
-Detailed judge-friendly architecture and diagrams: `docs/judge/ARCHITECTURE.md`.
+## Judge Resources
 
-## Judge Docs
+| Resource | Description |
+| --- | --- |
+| [📘 Quick Start](docs/judge/QUICK_START.md) | Fastest local setup path for evaluation. |
+| [🏗 Architecture](docs/judge/ARCHITECTURE.md) | System design, diagrams, and execution topology. |
+| [🎯 Rubric Mapping](docs/judge/RUBRIC_MAPPING.md) | Direct mapping from judging criteria to evidence. |
+| [🧪 API Examples](docs/judge/API_EXAMPLES.md) | Copy-paste REST and MCP validation requests. |
+| [📑 Evaluation Summary](docs/judge/EVALUATION_SUMMARY.md) | Compact capstone evidence cheat sheet. |
+| [▶ Demo Guide](docs/judge/DEMO_GUIDE.md) | Scenario-driven walkthrough for live judging. |
+| [✅ Judge Checklist](docs/judge/JUDGE_CHECKLIST.md) | Fast verification checklist during review. |
 
-- Hub: `docs/judge/README.md`
-- Quick Start: `docs/judge/QUICK_START.md`
-- Demo Walkthrough: `docs/judge/DEMO_GUIDE.md`
-- Architecture + Diagrams: `docs/judge/ARCHITECTURE.md`
-- Rubric Mapping: `docs/judge/RUBRIC_MAPPING.md`
-- API Examples: `docs/judge/API_EXAMPLES.md`
-- Evaluation Summary: `docs/judge/EVALUATION_SUMMARY.md`
+## Future Roadmap
 
-## Deployment
-
-Production split deployment:
-
-- Backend API on Render
-- Frontend SPA on Vercel
-- PostgreSQL on Neon
-
-Repository includes deployment references in `render.yaml`, `frontend/vercel.json`, and `docs/deployment/deployment.md`.
-
-## Live Demo Endpoints
-
-Local development defaults:
-
-- Frontend URL: `http://127.0.0.1:5173`
-- Backend URL: `http://127.0.0.1:8000`
-- Backend API docs: `http://127.0.0.1:8000/docs`
-- MCP URL: `http://127.0.0.1:8100`
-- MCP API docs: `http://127.0.0.1:8100/docs`
-
-## Future Work
-
-- Export-ready PDF monthly reports.
-- Multi-statement trend and seasonality analysis.
-- Goal simulation and what-if planning.
-- Collaboration features for households and advisors.
+- Export-ready PDF reporting.
+- Multi-statement trend and seasonality intelligence.
+- Goal simulation and what-if planning depth.
+- Extended collaboration flows for households/advisors.
+- Optional advanced MCP service integrations.
 
 ## License
 
-This project is licensed under `LICENSE`.
+This project is licensed under the [MIT License](LICENSE).

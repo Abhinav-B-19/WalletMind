@@ -1,76 +1,97 @@
 # Judge Hub: WalletMind
 
-WalletMind is an AI-first personal finance intelligence workspace that turns uploaded bank statements into explainable, actionable outputs in minutes.
+Welcome to the central evaluation dashboard for WalletMind.
 
-This Judge Hub is designed for a 5-minute evaluation flow.
+This page is designed for first-time capstone reviewers who want a fast path through architecture, execution evidence, APIs, and rubric alignment.
 
-## Project Overview
+## Quick Evaluation
 
-WalletMind provides a complete statement-to-insight pipeline:
+1. Follow [📘 Quick Start](./QUICK_START.md) to run backend, frontend, and MCP.
+2. Run [▶ Demo Guide](./DEMO_GUIDE.md) Scenario 1 and Scenario 4.
+3. Validate architecture and rubric evidence with [🏗 Architecture](./ARCHITECTURE.md) and [🎯 Rubric Mapping](./RUBRIC_MAPPING.md).
+4. Spot-check contracts with [🧪 API Examples](./API_EXAMPLES.md).
 
-1. Upload a bank statement.
-2. Parse and normalize transactions.
-3. Generate financial health, insights, budget recommendations, and monthly report outputs.
-4. Use a grounded AI assistant for follow-up questions.
-5. Run multi-agent orchestration through a dedicated Agent Playground.
+Expected total review time: 10 to 20 minutes.
 
-## Why WalletMind
+## Evaluation Flow
 
-- Demonstrates production-style AI engineering, not just prompt demos.
-- Combines deterministic financial computation with LLM explanations.
-- Exposes both REST APIs and MCP tools for modern AI integration patterns.
-- Includes test coverage across ADK runtime, agents, MCP infrastructure, and frontend UX.
+```mermaid
+flowchart LR
+	A[Quick Start] --> B[Demo Guide]
+	B --> C[Architecture]
+	C --> D[Rubric Mapping]
+	D --> E[API + MCP Validation]
+	E --> F[Evaluation Summary]
+```
 
-## Problem It Solves
+## Documentation Map
 
-Users often have transaction data but no structured intelligence. WalletMind converts raw statement files into:
+| Section | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 📘 Quick Start | Launch backend, frontend, and MCP quickly. | [Open](./QUICK_START.md) | 3 min |
+| 🏗 Architecture | Coordinator, agents, tools, and MCP diagrams. | [Open](./ARCHITECTURE.md) | 4 min |
+| ▶ Demo Guide | Scenario-based evaluator walkthrough. | [Open](./DEMO_GUIDE.md) | 5 min |
+| 🎯 Rubric Mapping | Direct scorecard-to-evidence mapping. | [Open](./RUBRIC_MAPPING.md) | 3 min |
+| 🧪 API Examples | Copy-paste REST and MCP validation calls. | [Open](./API_EXAMPLES.md) | 3 min |
+| 📑 Evaluation Summary | One-page implementation cheat sheet. | [Open](./EVALUATION_SUMMARY.md) | 2 min |
+| ✅ Judge Checklist | Fast completion checklist during review. | [Open](./JUDGE_CHECKLIST.md) | 2 min |
+| 🖼 Screenshots | Required screenshot inventory and naming. | [Open](../screenshots/README.md) | 1 min |
 
-- Measurable financial health scoring.
-- Spend pattern diagnostics and trend insights.
-- Actionable budget opportunities.
-- Executive-style monthly reporting.
-- Conversational, retrieval-grounded Q&A.
+## Architecture
 
-## Technology Stack
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🧠 Coordinator | Intent routing, strategy, and aggregation. | [Coordinator View](./ARCHITECTURE.md) | 2 min |
+| 🤖 Specialized Agents | Domain-specific execution model. | [Agent Topology](./ARCHITECTURE.md) | 2 min |
+| 🛠 Function Tools | Deterministic tool boundary to services. | [Tool Flow](./ARCHITECTURE.md) | 1 min |
+| 🔌 MCP Layer | Adapter + registry + standalone server. | [MCP Architecture](./ARCHITECTURE.md) | 2 min |
 
-- Frontend: React, TypeScript, Vite, React Query, Tailwind.
-- Backend: FastAPI, Pydantic, SQLAlchemy.
-- AI Runtime: Google ADK (`google.adk.Agent`, ADK Function Tools).
-- Agent System: Coordinator + specialized agents.
-- Protocol Layer: Standalone MCP server with auto-registered WalletMind tools.
-- Testing: Pytest (backend), Vitest + Testing Library (frontend).
+## Demo
 
-## AI Architecture Summary
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| ▶ End-to-End Demo | Upload to dashboard to coordinator timeline flow. | [Scenario 1](./DEMO_GUIDE.md) | 4 min |
+| ▶ Multi-Agent Demo | Planner decomposition across specialized agents. | [Scenario 4](./DEMO_GUIDE.md) | 3 min |
 
-High-level flow:
+## API
 
-- UI or API triggers analysis request.
-- `CoordinatorAgent` routes execution strategy (single or multi-agent).
-- Specialized agents invoke ADK Function Tools.
-- Tools call deterministic WalletMind services.
-- Results are aggregated and returned to API/UI and MCP consumers.
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🧪 REST Samples | Validate health, insights, budget, report, assistant, and coordinator endpoints. | [API Examples](./API_EXAMPLES.md) | 3 min |
 
-## Feature Highlights
+## Swagger
 
-- Statement upload and processing workflow.
-- AI Dashboard (health, insights, budget, report cards).
-- Agent Playground with coordinator timeline and per-agent cards.
-- Financial Assistant with grounded responses.
-- MCP endpoints for tool discovery and execution.
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 📗 REST Swagger | Interactive backend API documentation. | `http://127.0.0.1:8000/docs` | 2 min |
 
-## Judge Document Index
+## MCP
 
-- [Quick Start](./QUICK_START.md)
-- [Demo Guide](./DEMO_GUIDE.md)
-- [Architecture + Diagrams](./ARCHITECTURE.md)
-- [Rubric Mapping](./RUBRIC_MAPPING.md)
-- [API Examples](./API_EXAMPLES.md)
-- [Evaluation Summary Cheat Sheet](./EVALUATION_SUMMARY.md)
-- [Required Screenshot List](../screenshots/README.md)
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🔗 MCP Swagger | Interactive MCP infrastructure documentation. | `http://127.0.0.1:8100/docs` | 2 min |
+| 🔍 MCP Discovery | Verify registered WalletMind tools. | [API Examples](./API_EXAMPLES.md) | 1 min |
 
-## Fast Path For Judges
+## Agent Playground
 
-1. Follow [Quick Start](./QUICK_START.md).
-2. Run Scenario 1 and Scenario 4 from [Demo Guide](./DEMO_GUIDE.md).
-3. Review architecture diagrams in [Architecture](./ARCHITECTURE.md).
-4. Validate rubric alignment in [Rubric Mapping](./RUBRIC_MAPPING.md).
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🎮 Agent Playground | Execute coordinator flows and inspect timeline + per-agent outputs. | `http://127.0.0.1:5173/app/agent-playground` | 3 min |
+
+## Judge Hub
+
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🧭 Judge Hub UI | Frontend evaluator-oriented navigation experience. | `http://127.0.0.1:5173/app/judge` | 2 min |
+
+## Rubric Mapping
+
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 🎯 Evidence Matrix | Requirement-to-file mapping for scoring confidence. | [Rubric Mapping](./RUBRIC_MAPPING.md) | 3 min |
+
+## Evaluation Summary
+
+| Item | Description | Link | Expected Review Time |
+| --- | --- | --- | --- |
+| 📑 Cheat Sheet | Compact checklist of implemented capstone concepts. | [Evaluation Summary](./EVALUATION_SUMMARY.md) | 2 min |
