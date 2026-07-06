@@ -26,7 +26,7 @@ export class ApiClientError extends Error {
 
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
-  timeout: 10000,
+  timeout: 90000,
 });
 
 apiClient.interceptors.response.use(

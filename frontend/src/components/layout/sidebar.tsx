@@ -26,6 +26,12 @@ const links = [
     comingSoon: false,
   },
   {
+    to: "/app/agent-playground",
+    label: "🤖 Agent Playground",
+    icon: Bot,
+    comingSoon: false,
+  },
+  {
     to: "/app/dashboard",
     label: "AI Dashboard",
     icon: CircleDollarSign,

@@ -4,6 +4,46 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { appRoutes } from "@/app/routes";
 
+vi.mock("@/lib/api/statements", () => ({
+  listStatements: vi.fn().mockResolvedValue([
+    {
+      statement_uuid: "8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      original_filename: "statement.csv",
+      uploaded_at: "2026-07-01T00:00:00Z",
+      analysis_status: "ready_for_analysis",
+      status: "ready_for_analysis",
+      parser_type: "csv",
+      file_size: 12345,
+      file_type: "text/csv",
+      stored_filename: "statement.csv",
+    },
+  ]),
+}));
+
+vi.mock("@/lib/api/users", () => ({
+  listUsers: vi.fn().mockResolvedValue([
+    {
+      id: "user-123",
+      name: "Route Tester",
+      occupation: "QA",
+      monthly_income: 5000,
+      currency: "USD",
+      primary_financial_goal: "Build Emergency Fund",
+    },
+  ]),
+  submitRegistration: vi.fn(),
+}));
+
+vi.mock("@/lib/api/agents", () => ({
+  executeAgents: vi.fn(),
+  executionModeSchema: {
+    enum: {
+      single: "single",
+      multi: "multi",
+    },
+  },
+}));
+
 vi.mock("@/features/ai-dashboard/hooks", () => ({
   useHealthScore: () => ({
     isLoading: true,
@@ -185,6 +225,32 @@ describe("routing", () => {
     expect(
       await screen.findByRole("heading", {
         name: "Statement Upload Workspace",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("agent playground page loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/app/agent-playground"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Agent Playground",
       }),
     ).toBeInTheDocument();
   });

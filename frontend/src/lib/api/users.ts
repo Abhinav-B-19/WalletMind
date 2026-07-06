@@ -18,9 +18,17 @@ const userEnvelopeSchema = z.object({
   data: userDataSchema,
 });
 
+const userListEnvelopeSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.array(userDataSchema),
+});
+
+export type WalletMindUser = z.infer<typeof userDataSchema>;
+
 export async function submitRegistration(
   data: RegistrationFormData,
-): Promise<z.infer<typeof userDataSchema>> {
+): Promise<WalletMindUser> {
   try {
     const response = await apiClient.post("/users", {
       name: data.fullName,
@@ -31,6 +39,20 @@ export async function submitRegistration(
     });
 
     const parsed = userEnvelopeSchema.parse(response.data);
+    return parsed.data;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error("Received an unexpected response from the server.");
+    }
+
+    throw error;
+  }
+}
+
+export async function listUsers(): Promise<WalletMindUser[]> {
+  try {
+    const response = await apiClient.get("/users");
+    const parsed = userListEnvelopeSchema.parse(response.data);
     return parsed.data;
   } catch (error) {
     if (error instanceof z.ZodError) {
