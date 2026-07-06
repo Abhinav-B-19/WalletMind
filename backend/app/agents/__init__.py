@@ -3,6 +3,7 @@
 from backend.app.agents.assistant_agent import AssistantAgent
 from backend.app.agents.base_agent import WalletMindBaseAgent
 from backend.app.agents.budget_agent import BudgetAgent
+from backend.app.agents.coordinator_agent import CoordinatorAgent
 from backend.app.agents.context import AgentExecutionContext
 from backend.app.agents.health_agent import HealthAgent
 from backend.app.agents.insights_agent import InsightsAgent
@@ -26,6 +27,7 @@ __all__ = [
     "AgentMetadata",
     "AgentRegistry",
     "BudgetAgent",
+    "CoordinatorAgent",
     "HealthAgent",
     "InsightsAgent",
     "ProcessingAgent",

@@ -94,6 +94,7 @@ class WalletMindBaseAgent(ABC):
                 started_at=started_at,
                 ended_at=ended_at,
                 status=AgentExecutionStatus.COMPLETED,
+                error=None,
             )
             result = success_result(
                 metadata=self._metadata,
@@ -122,6 +123,7 @@ class WalletMindBaseAgent(ABC):
                 started_at=started_at,
                 ended_at=ended_at,
                 status=AgentExecutionStatus.FAILED,
+                error=str(exc),
             )
             result = failed_result(
                 metadata=self._metadata,

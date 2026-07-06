@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import Request
 
+from backend.app.agents.coordinator_agent import CoordinatorAgent
 from backend.app.services.ai.ai_service import AIService
 from backend.app.services.analysis.spending_insights_service import (
     SpendingInsightsService,
@@ -80,3 +81,9 @@ def get_financial_report_service(request: Request) -> FinancialReportService:
     """Return the app-scoped monthly financial report service instance."""
 
     return request.app.state.financial_report_service
+
+
+def get_coordinator_agent(request: Request) -> CoordinatorAgent:
+    """Return the app-scoped coordinator agent instance."""
+
+    return request.app.state.coordinator_agent

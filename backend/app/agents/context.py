@@ -35,6 +35,8 @@ class AgentExecutionContext:
         started_at: datetime,
         ended_at: datetime,
         status: AgentExecutionStatus,
+        execution_order: int | None = None,
+        error: str | None = None,
     ) -> AgentExecutionTraceStep:
         """Append a completed trace step to this execution context."""
 
@@ -45,6 +47,10 @@ class AgentExecutionContext:
             ended_at=ended_at,
             duration_ms=duration_ms,
             status=status,
+            execution_order=execution_order
+            if execution_order is not None
+            else len(self.execution_trace) + 1,
+            error=error,
         )
         self.execution_trace.append(step)
         return step
@@ -59,4 +65,5 @@ class AgentExecutionContext:
             started_at=skipped_at,
             ended_at=skipped_at,
             status=AgentExecutionStatus.SKIPPED,
+            error=None,
         )

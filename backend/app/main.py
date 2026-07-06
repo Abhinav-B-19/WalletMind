@@ -10,6 +10,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from backend.app.core.config import ALLOWED_ORIGINS
 
 
@@ -24,6 +25,15 @@ def _ensure_project_root_on_path() -> None:
 
 _ensure_project_root_on_path()
 
+from backend.app.adk.runtime import WalletMindAdkRuntimeFactory
+from backend.app.agents.assistant_agent import AssistantAgent
+from backend.app.agents.budget_agent import BudgetAgent
+from backend.app.agents.coordinator_agent import CoordinatorAgent
+from backend.app.agents.health_agent import HealthAgent
+from backend.app.agents.insights_agent import InsightsAgent
+from backend.app.agents.processing_agent import ProcessingAgent
+from backend.app.agents.registry import AgentRegistry
+from backend.app.agents.report_agent import ReportAgent
 from backend.app.api.errors import register_error_handlers
 from backend.app.api.router import api_router
 from backend.app.core.config import STORAGE_DIR
@@ -111,6 +121,25 @@ def create_app() -> FastAPI:
     app.state.processing_dispatcher = ProcessingDispatcher(
         processing_service=app.state.statement_processing_service,
     )
+
+    app.state.adk_runtime = WalletMindAdkRuntimeFactory().create()
+
+    app.state.agent_registry = AgentRegistry()
+    for agent in (
+        ProcessingAgent(),
+        HealthAgent(),
+        InsightsAgent(),
+        BudgetAgent(),
+        ReportAgent(),
+        AssistantAgent(),
+    ):
+        app.state.agent_registry.register(agent=agent)
+
+    app.state.coordinator_agent = CoordinatorAgent(
+        registry=app.state.agent_registry,
+        runtime=app.state.adk_runtime,
+    )
+
     app.include_router(api_router)
     register_error_handlers(app)
 

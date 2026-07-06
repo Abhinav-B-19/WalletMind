@@ -30,6 +30,8 @@ class AgentExecutionTraceStep:
     ended_at: datetime
     duration_ms: float
     status: AgentExecutionStatus
+    execution_order: int
+    error: str | None = None
 
 
 @dataclass(frozen=True)
