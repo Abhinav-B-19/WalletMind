@@ -18,3 +18,6 @@ pytest>=8.0
 
 # ADK agent integration
 google-adk>=2.3.0
+
+# MCP infrastructure (stable line)
+mcp>=1.28.1,<2
