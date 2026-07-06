@@ -1,263 +1,143 @@
 # WalletMind
 
-WalletMind is an AI-first financial intelligence platform that converts raw bank statements into actionable insights, deterministic scores, grounded assistant responses, and advisor-style monthly reports.
+WalletMind is an AI-first financial intelligence platform that turns raw bank statements into explainable financial outcomes in minutes.
 
-This repository is the capstone submission build, optimized for product clarity, technical transparency, and production-style engineering quality.
+It combines deterministic financial computation with multi-agent orchestration, Google ADK function tooling, and MCP interoperability.
 
-## Screenshots (Placeholders)
+## Architecture Image
+
+Architecture diagram placeholder:
+
+- `assets/diagrams/walletmind-architecture-placeholder.png`
+
+## Feature Screenshots
+
+Screenshot placeholders:
 
 - Landing Page: `assets/screenshots/landing-page-placeholder.png`
-- AI Dashboard: `assets/screenshots/ai-dashboard-placeholder.png`
+- Dashboard: `assets/screenshots/ai-dashboard-placeholder.png`
 - Financial Health: `assets/screenshots/financial-health-placeholder.png`
 - AI Assistant: `assets/screenshots/assistant-placeholder.png`
 - Monthly Report: `assets/screenshots/monthly-report-placeholder.png`
 
-## Architecture Diagram (Placeholder)
+Required judge screenshot checklist is documented at `docs/screenshots/README.md`.
 
-- Architecture diagram: `assets/diagrams/walletmind-architecture-placeholder.png`
+## Demo GIF Placeholders
+
+- Upload to Dashboard flow: `assets/screenshots/demo-upload-to-dashboard-placeholder.gif`
+- Agent Playground orchestration: `assets/screenshots/demo-agent-playground-placeholder.gif`
+- MCP tool execution: `assets/screenshots/demo-mcp-placeholder.gif`
 
 ## Project Overview
 
-WalletMind delivers a complete statement-to-intelligence workflow:
+WalletMind workflow:
 
-1. Upload statement files (CSV, XLS/XLSX, PDF, image-based parsing paths).
-2. Parse and normalize transactions into a consistent schema.
-3. Run deterministic engines for financial health, insights, and budgeting.
-4. Layer Gemini reasoning for explanations, recommendations, and assistant responses.
-5. Present outcomes through a polished React SaaS interface.
+1. Upload and process statement files.
+2. Normalize transactions into a consistent schema.
+3. Run health score, insights, budget, and report engines.
+4. Route analysis through coordinator-led single or multi-agent execution.
+5. Present transparent outputs in dashboard cards and execution timelines.
 
-## Core Features
+## Quick Start
 
-- Statement upload, library management, and processing status tracking.
-- Transaction enrichment and classification (merchant, category, channel, recurring signals).
-- Spending Insights with category, merchant, and cash flow visualizations.
-- Financial Health score with component breakdown and recommendations.
-- Budget Recommendations with deterministic savings opportunities.
-- AI Financial Assistant with grounded source references.
-- Monthly Financial Report with executive summary, risks, and action plan.
-
-## Tech Stack
-
-- Frontend: React, TypeScript, React Router, React Query, Recharts, Tailwind CSS.
-- Backend: FastAPI, Pydantic, SQLAlchemy.
-- AI: Gemini API integration.
-- Testing: Pytest (backend), Vitest + Testing Library (frontend).
-
-## Repository Structure
-
-```text
-backend/                  FastAPI app, services, routers, schemas
-frontend/                 React app, pages, features, components, hooks
-walletmind/               Core domain package and shared backend logic
-tests/                    Backend test suites
-docs/                     Architecture, implementation, deployment docs
-assets/                   Branding, diagrams, screenshots, notebook assets
-notebook/                 Kaggle/demo notebook assets
-scripts/                  Utilities and automation scripts
-storage/                  Runtime storage (db, uploads, cache)
-```
-
-## Setup
-
-### 1. Clone
-
-```bash
-git clone <your-repo-url>
-cd WalletMind
-```
-
-### 2. Backend Setup
+### 1. Backend
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+python -m backend.app.main
 ```
 
-Set your Gemini key in `.env`:
+Backend: `http://127.0.0.1:8000`
 
-```env
-GEMINI_API_KEY=your_key_here
-```
-
-Run backend:
-
-```bash
-python backend/app/main.py
-```
-
-### 3. Frontend Setup
+### 2. Frontend
 
 ```bash
 cd frontend
 npm install
-```
-
-Optional frontend env (`frontend/.env`):
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-Run frontend:
-
-```bash
 npm run dev
 ```
 
-## Environment Variables
+Frontend: `http://localhost:5173`
 
-Backend (`.env`):
-
-- `GEMINI_API_KEY` (required)
-- `GEMINI_MODEL` (default: `gemini-2.5-flash`)
-- `TEMPERATURE` (default: `0.2`)
-- `MAX_OUTPUT_TOKENS` (default: `2048`)
-
-Frontend (`frontend/.env`, optional):
-
-- `VITE_API_BASE_URL` (default: `http://127.0.0.1:8000`)
-
-## API Overview
-
-Representative API endpoints:
-
-- `POST /api/v1/users/register`
-- `POST /api/v1/statements/upload`
-- `GET /api/v1/statements`
-- `GET /api/v1/statements/{statement_uuid}/transactions`
-- `GET /api/v1/statements/{statement_uuid}/health-score`
-- `GET /api/v1/statements/{statement_uuid}/insights`
-- `GET /api/v1/statements/{statement_uuid}/budget-recommendations`
-- `GET /api/v1/statements/{statement_uuid}/monthly-report`
-- `POST /api/v1/assistant/chat`
-
-## Testing & Validation
-
-Backend:
+### 3. MCP Server
 
 ```bash
-python -m pytest
-python -m ruff check .
-python -m black --check .
+cd ..
+source .venv/bin/activate
+python -m backend.app.mcp.server
 ```
 
-Frontend:
+MCP: `http://127.0.0.1:8100`
 
-```bash
-cd frontend
-npm run lint
-npm run test
-npm run build
+For the full judge flow, use `docs/judge/QUICK_START.md`.
+
+## Project Structure
+
+```text
+backend/                  FastAPI APIs, agents, ADK runtime, MCP server, tools
+frontend/                 React UI, dashboard, assistant, agent playground
+walletmind/               Shared domain logic and services
+tests/                    Backend validation suites
+docs/                     Architecture, implementation, deployment, judge pack
+assets/                   Branding, diagrams, screenshots, notebook assets
+sample_data/              Demo statement files for quick evaluation
+storage/                  Runtime db/uploads/cache/session artifacts
 ```
 
-## Development Notes
+## Technology Stack
 
-- Prefer deterministic computations for financial math; AI augments explanations.
-- Reuse existing hooks and feature components before creating new abstractions.
-- Keep assistant answers grounded with source transaction evidence.
+- Frontend: React, TypeScript, Vite, React Query, Tailwind.
+- Backend: FastAPI, Pydantic, SQLAlchemy.
+- AI Runtime: Google Gemini + Google ADK.
+- Agent Tooling: ADK FunctionTool-based wrappers.
+- Protocol Layer: Standalone MCP infrastructure server.
+- Testing: Pytest, Vitest, Testing Library.
 
-## Future Roadmap
+## AI Architecture
 
-- Export-ready PDF monthly reports.
-- Multi-statement trend aggregation.
-- Scenario simulation and goal planning workflows.
-- Role-based collaboration and shared household workspaces.
+WalletMind AI architecture centers on coordinator-orchestrated execution:
 
-## Contribution
+- `CoordinatorAgent` as orchestration control plane.
+- Specialized agents for health, insights, budget, report, assistant, and processing.
+- ADK Function Tools as deterministic boundaries to domain services.
+- MCP adapter and registry exposing capabilities through `/mcp/*` APIs.
+- Shared service layer for business logic reuse across REST and MCP.
 
-1. Create a feature branch.
-2. Keep changes scoped and tested.
-3. Run backend and frontend validation suites before opening PR.
-4. Document architecture-impacting changes in `docs/`.
+Detailed judge-friendly architecture and diagrams: `docs/judge/ARCHITECTURE.md`.
 
-## License
+## Judge Docs
 
-This project is licensed under the terms in `LICENSE`.
+- Hub: `docs/judge/README.md`
+- Quick Start: `docs/judge/QUICK_START.md`
+- Demo Walkthrough: `docs/judge/DEMO_GUIDE.md`
+- Architecture + Diagrams: `docs/judge/ARCHITECTURE.md`
+- Rubric Mapping: `docs/judge/RUBRIC_MAPPING.md`
+- API Examples: `docs/judge/API_EXAMPLES.md`
+- Judge Checklist: `docs/judge/JUDGE_CHECKLIST.md`
+- Evaluation Summary: `docs/judge/EVALUATION_SUMMARY.md`
 
 ## Deployment
 
-This repository supports a production split deployment:
+Production split deployment:
 
 - Backend API on Render
 - Frontend SPA on Vercel
 - PostgreSQL on Neon
 
-### Neon Deployment
+Repository includes deployment references in `render.yaml`, `frontend/vercel.json`, and `docs/deployment/deployment.md`.
 
-1. Create a Neon project and database.
-2. Copy the full PostgreSQL connection string.
-3. Set `DATABASE_URL` in Render backend environment variables.
+## Future Work
 
-### Render Deployment (Backend)
+- Export-ready PDF monthly reports.
+- Multi-statement trend and seasonality analysis.
+- Goal simulation and what-if planning.
+- Collaboration features for households and advisors.
 
-This repository includes a Render Blueprint in `render.yaml` with:
+## License
 
-- Service name: `walletmind-api`
-- Environment: Python
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
-- Health check: `GET /`
-- Auto deploy: enabled
-
-Required backend environment variables on Render:
-
-- `DATABASE_URL`
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL`
-- `TEMPERATURE`
-- `MAX_OUTPUT_TOKENS`
-- `ALLOWED_ORIGINS`
-
-Recommended `ALLOWED_ORIGINS` example:
-
-```env
-ALLOWED_ORIGINS=https://walletmind.vercel.app
-```
-
-### Vercel Deployment (Frontend)
-
-The frontend includes `frontend/vercel.json` with SPA rewrites so deep-link refresh works for routes like:
-
-- `/app/home`
-- `/app/chat`
-- `/app/settings`
-
-Required frontend environment variables on Vercel:
-
-- `VITE_API_BASE_URL` (Render backend URL, no trailing slash)
-- `VITE_APP_VERSION`
-- `VITE_BUILD_DATE`
-- `VITE_GIT_COMMIT`
-
-Example:
-
-```env
-VITE_API_BASE_URL=https://walletmind-api.onrender.com
-VITE_APP_VERSION=0.1.0
-VITE_BUILD_DATE=2026-07-05
-VITE_GIT_COMMIT=<git-sha>
-```
-
-### Deployment Order
-
-1. Provision Neon and copy `DATABASE_URL`.
-2. Deploy backend on Render with required environment variables.
-3. Confirm backend health endpoint responds at `GET /`.
-4. Deploy frontend on Vercel with `VITE_API_BASE_URL` pointing to Render.
-5. Set backend `ALLOWED_ORIGINS` to the final Vercel domain.
-6. Re-deploy backend to apply CORS origin updates.
-
-### Common Troubleshooting
-
-- Deep route refresh returns 404 on Vercel:
-  - Ensure `frontend/vercel.json` is present and active in deployment output.
-- CORS blocked in browser:
-  - Verify `ALLOWED_ORIGINS` exactly matches frontend origin.
-  - Avoid protocol mismatch (`http` vs `https`).
-- Backend starts locally but fails on Render:
-  - Confirm `DATABASE_URL` and `GEMINI_API_KEY` are set.
+This project is licensed under `LICENSE`.
 - Frontend can load but API requests fail:
   - Verify `VITE_API_BASE_URL` targets Render backend URL.
 
