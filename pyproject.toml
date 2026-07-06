@@ -52,7 +52,7 @@ test = [
   "pytest>=8.0",
 ]
 agents = [
-  "google-adk>=1.0.0",
+  "google-adk>=2.3.0",
 ]
 
 [tool.setuptools.packages.find]

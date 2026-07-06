@@ -18,4 +18,4 @@ pytest>=8.0
 
 # Future agent integration
 # Install when ADK-backed application code is introduced:
-# google-adk>=1.0.0
+google-adk>=2.3.0
