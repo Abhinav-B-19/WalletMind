@@ -2,6 +2,9 @@
 
 Add screenshots in this folder to support judge evaluation and README polish.
 
+Current status: the required screenshot set has been captured in
+`assets/screenshots/` using the naming convention below.
+
 ## Required Screenshots
 
 1. Landing Page

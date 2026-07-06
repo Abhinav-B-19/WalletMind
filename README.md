@@ -6,27 +6,31 @@ It combines deterministic financial computation with multi-agent orchestration, 
 
 ## Architecture Image
 
-Architecture diagram placeholder:
-
-- `assets/diagrams/walletmind-architecture-placeholder.png`
+![WalletMind Architecture Overview](assets/diagrams/walletmind-architecture-overview.png)
 
 ## Feature Screenshots
 
-Screenshot placeholders:
+Core product screenshots:
 
-- Landing Page: `assets/screenshots/landing-page-placeholder.png`
-- Dashboard: `assets/screenshots/ai-dashboard-placeholder.png`
-- Financial Health: `assets/screenshots/financial-health-placeholder.png`
-- AI Assistant: `assets/screenshots/assistant-placeholder.png`
-- Monthly Report: `assets/screenshots/monthly-report-placeholder.png`
+- Landing Page: `assets/screenshots/landing-page.png`
+- Dashboard: `assets/screenshots/dashboard.png`
+- Upload: `assets/screenshots/upload.png`
+- Agent Playground: `assets/screenshots/agent-playground.png`
+- Coordinator Timeline: `assets/screenshots/coordinator-timeline.png`
+- Financial Health: `assets/screenshots/health-card.png`
+- Budget Recommendations: `assets/screenshots/budget-card.png`
+- Spending Insights: `assets/screenshots/insights-card.png`
+- Monthly Report: `assets/screenshots/report-card.png`
+- AI Assistant: `assets/screenshots/assistant-card.png`
+- REST Swagger: `assets/screenshots/swagger-rest.png`
+- MCP Swagger: `assets/screenshots/swagger-mcp.png`
 
 Required judge screenshot checklist is documented at `docs/screenshots/README.md`.
 
-## Demo GIF Placeholders
+## Demo Assets
 
-- Upload to Dashboard flow: `assets/screenshots/demo-upload-to-dashboard-placeholder.gif`
-- Agent Playground orchestration: `assets/screenshots/demo-agent-playground-placeholder.gif`
-- MCP tool execution: `assets/screenshots/demo-mcp-placeholder.gif`
+This repository currently ships static PNG screenshots for judge validation.
+Animated demo GIFs can be added later under `assets/screenshots/`.
 
 ## Project Overview
 
@@ -128,6 +132,16 @@ Production split deployment:
 
 Repository includes deployment references in `render.yaml`, `frontend/vercel.json`, and `docs/deployment/deployment.md`.
 
+## Live Demo Endpoints
+
+Local development defaults:
+
+- Frontend URL: `http://127.0.0.1:5173`
+- Backend URL: `http://127.0.0.1:8000`
+- Backend API docs: `http://127.0.0.1:8000/docs`
+- MCP URL: `http://127.0.0.1:8100`
+- MCP API docs: `http://127.0.0.1:8100/docs`
+
 ## Future Work
 
 - Export-ready PDF monthly reports.
@@ -138,12 +152,3 @@ Repository includes deployment references in `render.yaml`, `frontend/vercel.jso
 ## License
 
 This project is licensed under `LICENSE`.
-
-- Frontend can load but API requests fail:
-  - Verify `VITE_API_BASE_URL` targets Render backend URL.
-
-### Live Demo Placeholders
-
-- Frontend URL: `<vercel-frontend-url>`
-- Backend URL: `<render-backend-url>`
-- API docs: `<render-backend-url>/docs`

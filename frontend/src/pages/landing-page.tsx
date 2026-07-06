@@ -201,7 +201,7 @@ export function HomePage() {
             </div>
 
             <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-soft)] p-4 text-xs text-[var(--text-muted)]">
-              Dashboard preview placeholder
+              Representative WalletMind dashboard preview panel
               <div className="mt-3 h-28 rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[var(--surface)]" />
             </div>
           </CardContent>
@@ -269,7 +269,7 @@ export function HomePage() {
                 <p className="text-sm font-semibold">{item}</p>
                 <div className="h-24 rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[var(--surface-soft)]" />
                 <p className="text-xs text-[var(--text-muted)]">
-                  Screenshot placeholder
+                  Preview tile for the {item} experience
                 </p>
               </CardContent>
             </Card>
