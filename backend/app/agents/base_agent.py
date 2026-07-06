@@ -10,13 +10,18 @@ from __future__ import annotations
 import importlib
 import logging
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 from time import perf_counter
 from typing import Any
 
 from backend.app.adk.runner import WalletMindRunner
 from backend.app.agents.context import AgentExecutionContext
 from backend.app.agents.response import failed_result, success_result
-from backend.app.agents.types import AgentExecutionResult, AgentMetadata
+from backend.app.agents.types import (
+    AgentExecutionResult,
+    AgentExecutionStatus,
+    AgentMetadata,
+)
 
 
 class AdkAgentImportError(ImportError):
@@ -65,7 +70,9 @@ class WalletMindBaseAgent(ABC):
     ) -> AgentExecutionResult:
         """Run standardized lifecycle: validate -> before -> impl -> after."""
 
+        started_at = datetime.now(UTC)
         started = perf_counter()
+        context.mark_status(AgentExecutionStatus.STARTED)
         self._logger.info(
             "Agent Started",
             extra={
@@ -80,10 +87,19 @@ class WalletMindBaseAgent(ABC):
             await self.before_execute(context=context)
             impl_result = await self.execute_impl(context=context)
             execution_time = perf_counter() - started
+            ended_at = datetime.now(UTC)
+            context.mark_status(AgentExecutionStatus.COMPLETED)
+            context.append_trace_step(
+                agent_name=self._metadata.name,
+                started_at=started_at,
+                ended_at=ended_at,
+                status=AgentExecutionStatus.COMPLETED,
+            )
             result = success_result(
                 metadata=self._metadata,
                 execution_time=execution_time,
                 result=impl_result,
+                trace=tuple(context.execution_trace),
             )
             await self.after_execute(context=context, result=result)
             self._logger.info(
@@ -99,10 +115,19 @@ class WalletMindBaseAgent(ABC):
             return result
         except Exception as exc:
             execution_time = perf_counter() - started
+            ended_at = datetime.now(UTC)
+            context.mark_status(AgentExecutionStatus.FAILED)
+            context.append_trace_step(
+                agent_name=self._metadata.name,
+                started_at=started_at,
+                ended_at=ended_at,
+                status=AgentExecutionStatus.FAILED,
+            )
             result = failed_result(
                 metadata=self._metadata,
                 execution_time=execution_time,
                 errors=[str(exc)],
+                trace=tuple(context.execution_trace),
             )
             await self.after_execute(context=context, result=result)
             self._logger.exception(

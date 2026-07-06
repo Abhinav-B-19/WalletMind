@@ -7,7 +7,7 @@ import pytest
 
 from backend.app.agents.base_agent import WalletMindBaseAgent
 from backend.app.agents.context import AgentExecutionContext
-from backend.app.agents.types import AgentMetadata
+from backend.app.agents.types import AgentExecutionStatus, AgentMetadata
 
 
 class FakeAdkAgent:
@@ -75,9 +75,11 @@ def test_base_agent_execute_returns_standardized_result(monkeypatch):
     )
 
     assert result.agent_name == "example_agent"
-    assert result.status == "success"
+    assert result.status == AgentExecutionStatus.COMPLETED
     assert result.result == {"final_response": "ok", "event_count": 2}
     assert result.errors == []
+    assert len(result.trace) == 1
+    assert result.trace[0].status == AgentExecutionStatus.COMPLETED
     assert hook_state.before_called is True
     assert hook_state.after_called is True
 
