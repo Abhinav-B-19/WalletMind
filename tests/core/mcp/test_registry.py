@@ -9,13 +9,15 @@ from backend.app.mcp.registry import MCPToolNotFoundError, MCPToolRegistry
 def test_registry_register_and_discover() -> None:
     registry = MCPToolRegistry()
     metadata = ToolMetadata(name="tool_a", description="A")
+    handler = object()
 
-    registered = registry.register_tool(tool=metadata)
+    registered = registry.register_tool(tool=metadata, handler=handler)
 
     assert registered.name == "tool_a"
     discovered = registry.discover_tool(name="tool_a")
     assert discovered is not None
     assert discovered.description == "A"
+    assert registry.discover_handler(name="tool_a") is handler
 
 
 def test_registry_discover_all_sorted() -> None:

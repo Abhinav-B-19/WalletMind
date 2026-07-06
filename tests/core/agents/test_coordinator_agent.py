@@ -33,8 +33,10 @@ class StubSpecializedAgent:
         )
         self.capabilities = capabilities
         self._should_fail = should_fail
+        self.received_contexts: list[AgentExecutionContext] = []
 
     async def execute(self, *, context: AgentExecutionContext) -> AgentExecutionResult:
+        self.received_contexts.append(context)
         if self._should_fail:
             raise RuntimeError(f"{self.metadata.name} failed")
 
@@ -215,3 +217,105 @@ def test_coordinator_workflow_and_runner_metadata() -> None:
     assert payload["metadata"]["workflow_name"] == "walletmind_coordinator_workflow"
     assert payload["metadata"]["runner_integrated"] is True
     assert payload["metadata"]["workflow"]["strategy"] == "sequential"
+
+
+def test_coordinator_builds_agent_specific_payload_contracts() -> None:
+    registry = AgentRegistry()
+    health = StubSpecializedAgent(
+        name="health_agent",
+        capabilities=("health", "financial_health", "score", "risk"),
+    )
+    assistant = StubSpecializedAgent(
+        name="assistant_agent",
+        capabilities=("assistant", "financial_advice", "chat"),
+    )
+    registry.register(agent=health)
+    registry.register(agent=assistant)
+
+    coordinator = CoordinatorAgent(registry=registry)
+    result = asyncio.run(
+        coordinator.execute(
+            context=_context(
+                "Analyze my finances",
+                inputs={
+                    "statement_uuid": "11111111-1111-1111-1111-111111111111",
+                    "statement_id": "11111111-1111-1111-1111-111111111111",
+                },
+            )
+        )
+    )
+
+    assert result.status == AgentExecutionStatus.COMPLETED
+    assert len(health.received_contexts) == 1
+    assert len(assistant.received_contexts) == 1
+
+    health_payload = health.received_contexts[0].extras
+    assistant_payload = assistant.received_contexts[0].extras
+
+    assert health_payload == {
+        "statement_uuid": "11111111-1111-1111-1111-111111111111"
+    }
+    assert assistant_payload == {
+        "statement_id": "11111111-1111-1111-1111-111111111111",
+        "question": "Analyze my finances",
+    }
+
+
+def test_coordinator_five_agent_orchestration_success_summary() -> None:
+    registry = AgentRegistry()
+    registry.register(
+        agent=StubSpecializedAgent(
+            name="health_agent",
+            capabilities=("health", "financial_health", "score", "risk"),
+        )
+    )
+    registry.register(
+        agent=StubSpecializedAgent(
+            name="insights_agent",
+            capabilities=("insights", "spending", "analytics"),
+        )
+    )
+    registry.register(
+        agent=StubSpecializedAgent(
+            name="budget_agent",
+            capabilities=("budget", "planning", "savings"),
+        )
+    )
+    registry.register(
+        agent=StubSpecializedAgent(
+            name="report_agent",
+            capabilities=("report", "monthly_report", "summary"),
+        )
+    )
+    registry.register(
+        agent=StubSpecializedAgent(
+            name="assistant_agent",
+            capabilities=("assistant", "financial_advice", "chat"),
+        )
+    )
+
+    coordinator = CoordinatorAgent(registry=registry)
+    result = asyncio.run(
+        coordinator.execute(
+            context=_context(
+                "Analyze my finances",
+                inputs={
+                    "statement_uuid": "11111111-1111-1111-1111-111111111111",
+                    "statement_id": "11111111-1111-1111-1111-111111111111",
+                },
+            )
+        )
+    )
+
+    payload = result.result
+    assert payload["overall_status"] == AgentExecutionStatus.COMPLETED.value
+    assert payload["metadata"]["selected_agent_count"] == 5
+    assert payload["metadata"]["successful_agent_count"] == 5
+    assert payload["metadata"]["failed_agent_count"] == 0
+    assert [step["status"] for step in payload["execution_trace"]] == [
+        AgentExecutionStatus.COMPLETED.value,
+        AgentExecutionStatus.COMPLETED.value,
+        AgentExecutionStatus.COMPLETED.value,
+        AgentExecutionStatus.COMPLETED.value,
+        AgentExecutionStatus.COMPLETED.value,
+    ]

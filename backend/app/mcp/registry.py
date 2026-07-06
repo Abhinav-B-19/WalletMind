@@ -42,6 +42,12 @@ class MCPToolRegistry:
         entry = self._tools.get(name)
         return entry.metadata if entry else None
 
+    def discover_handler(self, *, name: str) -> object | None:
+        """Return a registered execution handler by tool name."""
+
+        entry = self._tools.get(name)
+        return entry.handler if entry else None
+
     def discover_all(self) -> list[ToolMetadata]:
         """Return all registered tools sorted by tool name."""
 

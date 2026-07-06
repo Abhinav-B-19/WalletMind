@@ -318,9 +318,10 @@ class CoordinatorAgent(WalletMindBaseAgent):
         request: OrchestrationRequest,
         target_agent_name: str,
     ) -> AgentExecutionContext:
-        extras = dict(request.inputs)
-        extras.setdefault("query", request.query)
-        extras.setdefault("target_agent", target_agent_name)
+        extras = CoordinatorAgent._build_agent_payload(
+            request=request,
+            target_agent_name=target_agent_name,
+        )
         return AgentExecutionContext(
             user_id=request.user_id,
             session_id=request.session_id,
@@ -330,6 +331,33 @@ class CoordinatorAgent(WalletMindBaseAgent):
             memory_service=base_context.memory_service,
             extras=extras,
         )
+
+    @staticmethod
+    def _build_agent_payload(
+        *,
+        request: OrchestrationRequest,
+        target_agent_name: str,
+    ) -> dict[str, Any]:
+        """Build agent-specific execution payloads from resolved orchestration context."""
+
+        resolved_statement_uuid = request.inputs.get("statement_uuid")
+        resolved_statement_id = request.inputs.get("statement_id")
+        payload: dict[str, Any] = {}
+
+        if target_agent_name == "assistant_agent":
+            payload["statement_id"] = (
+                resolved_statement_id or resolved_statement_uuid
+            )
+            payload["question"] = request.query
+        else:
+            payload["statement_uuid"] = (
+                resolved_statement_uuid or resolved_statement_id
+            )
+
+        if "adk_tool_context" in request.inputs:
+            payload["adk_tool_context"] = request.inputs["adk_tool_context"]
+
+        return payload
 
     @staticmethod
     def _build_workflow_descriptor(

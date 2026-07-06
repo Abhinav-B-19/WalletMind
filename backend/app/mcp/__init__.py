@@ -1,7 +1,8 @@
-"""WalletMind MCP infrastructure package (Sprint 2.1).
+"""WalletMind MCP server package.
 
-This package provides transport-level MCP server primitives only.
-No WalletMind business services, ADK tools, or domain logic are registered here.
+Sprint 2.1 introduced MCP transport infrastructure.
+Sprint 2.2 exposes existing ADK Function Tools and coordinator orchestration
+through the MCP registry/adapter without moving business logic.
 """
 
 from backend.app.mcp.adapter import WalletMindMCPAdapter

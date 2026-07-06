@@ -6,6 +6,7 @@ WalletMind business services or ADK function tools.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -19,6 +20,8 @@ from backend.app.mcp.config import MCPServerConfig
 from backend.app.mcp.models import (
     HealthResponse,
     ServerMetadata,
+    ToolExecutionRequest,
+    ToolExecutionResponse,
     ToolMetadata,
     ToolRegistrationRequest,
     ToolRegistrationResponse,
@@ -34,7 +37,18 @@ def _resolve_mcp_sdk_version() -> str:
 
         return metadata.version("mcp")
     except Exception:  # noqa: BLE001
-        return "unavailable"
+        pass
+
+    try:
+        import mcp
+
+        module_version = getattr(mcp, "__version__", None)
+        if isinstance(module_version, str) and module_version.strip():
+            return module_version
+    except Exception:  # noqa: BLE001
+        pass
+
+    return "not-detected"
 
 
 class MCPInfrastructureServer:
@@ -68,16 +82,69 @@ class MCPInfrastructureServer:
         self._mcp_sdk_server = FastMCP(self.config.server_name)
         return self._mcp_sdk_server
 
+    def _bind_fastmcp_tools(self, *, tools: list[ToolMetadata]) -> None:
+        """Register registry-backed handlers on FastMCP instance when available."""
+
+        if self._mcp_sdk_server is None:
+            return
+
+        def _make_fastmcp_handler(
+            *,
+            tool_name: str,
+            description: str,
+            handler: Any,
+        ):
+            async def fastmcp_handler(**kwargs: Any) -> Any:
+                result = handler(dict(kwargs))
+                if inspect.isawaitable(result):
+                    result = await result
+                return result
+
+            fastmcp_handler.__name__ = f"mcp_{tool_name}"
+            fastmcp_handler.__doc__ = description or f"MCP tool: {tool_name}"
+            return fastmcp_handler
+
+        for tool in tools:
+            handler = self.registry.discover_handler(name=tool.name)
+            if handler is None:
+                continue
+
+            fastmcp_handler = _make_fastmcp_handler(
+                tool_name=tool.name,
+                description=tool.description,
+                handler=handler,
+            )
+            self._mcp_sdk_server.add_tool(
+                fn=fastmcp_handler,
+                name=tool.name,
+                description=tool.description or None,
+            )
+
     def startup(self) -> None:
         """Mark server startup and initialize SDK state."""
 
         self.initialize_sdk_server()
+        registered_count = 0
+        if self.config.auto_register_walletmind_tools:
+            tools = self.adapter.bootstrap_walletmind_tools()
+            registered_count = len(tools)
+            self._bind_fastmcp_tools(tools=tools)
         self.started_at = datetime.now(UTC)
+        logger.info(
+            "MCP infrastructure server started.",
+            extra={
+                "server_name": self.config.server_name,
+                "server_version": self.config.server_version,
+                "sdk": _resolve_mcp_sdk_version(),
+                "registered_tools": registered_count,
+            },
+        )
 
     def shutdown(self) -> None:
         """Mark server shutdown state."""
 
         self.started_at = None
+        logger.info("MCP infrastructure server stopped.")
 
     def server_metadata(self) -> ServerMetadata:
         """Return static and runtime server metadata."""
@@ -160,6 +227,49 @@ class MCPInfrastructureServer:
             tool=removed,
         )
 
+    async def execute_tool(
+        self,
+        *,
+        tool_name: str,
+        request: ToolExecutionRequest,
+    ) -> ToolExecutionResponse:
+        """Execute a registered MCP tool handler."""
+
+        handler = self.registry.discover_handler(name=tool_name)
+        if handler is None:
+            return ToolExecutionResponse(
+                success=False,
+                tool_name=tool_name,
+                result=None,
+                error=f"Tool '{tool_name}' is not registered.",
+            )
+
+        try:
+            result = handler(dict(request.args))
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception as exc:  # noqa: BLE001
+            return ToolExecutionResponse(
+                success=False,
+                tool_name=tool_name,
+                result=None,
+                error=str(exc),
+            )
+
+        if isinstance(result, dict):
+            payload = result
+        elif hasattr(result, "model_dump"):
+            payload = result.model_dump(mode="json")
+        else:
+            payload = {"result": result}
+
+        return ToolExecutionResponse(
+            success=True,
+            tool_name=tool_name,
+            result=payload,
+            error=None,
+        )
+
 
 def create_mcp_app(
     *,
@@ -169,6 +279,7 @@ def create_mcp_app(
     """Create standalone FastAPI app hosting MCP infrastructure endpoints."""
 
     infrastructure_server = server or MCPInfrastructureServer(config=config)
+    infrastructure_server.initialize_sdk_server()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -207,6 +318,25 @@ def create_mcp_app(
     @app.delete("/mcp/tools/{tool_name}", response_model=ToolRegistrationResponse)
     async def unregister_tool(tool_name: str) -> ToolRegistrationResponse:
         return infrastructure_server.unregister_tool(name=tool_name)
+
+    @app.post(
+        "/mcp/tools/{tool_name}/execute",
+        response_model=ToolExecutionResponse,
+    )
+    async def execute_tool(
+        tool_name: str,
+        request: ToolExecutionRequest,
+    ) -> ToolExecutionResponse:
+        return await infrastructure_server.execute_tool(
+            tool_name=tool_name,
+            request=request,
+        )
+
+    if infrastructure_server._mcp_sdk_server is not None:
+        app.mount(
+            "/mcp/protocol",
+            infrastructure_server._mcp_sdk_server.streamable_http_app(),
+        )
 
     app.state.mcp_infrastructure_server = infrastructure_server
     return app

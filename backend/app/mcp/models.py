@@ -33,6 +33,21 @@ class ToolRegistrationResponse(BaseModel):
     tool: ToolMetadata | None = None
 
 
+class ToolExecutionRequest(BaseModel):
+    """Request model for tool execution over MCP transport."""
+
+    args: dict[str, object] = Field(default_factory=dict)
+
+
+class ToolExecutionResponse(BaseModel):
+    """Response model for tool execution over MCP transport."""
+
+    success: bool
+    tool_name: str
+    result: dict[str, object] | None = None
+    error: str | None = None
+
+
 class ServerMetadata(BaseModel):
     """Metadata describing MCP server identity and capabilities."""
 

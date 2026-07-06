@@ -8,8 +8,9 @@ def test_mcp_config_defaults() -> None:
 
     assert config.host == "127.0.0.1"
     assert config.port == 8100
-    assert config.server_name == "walletmind_mcp"
+    assert config.server_name == "WalletMind MCP Server"
     assert config.auth_enabled is False
+    assert config.auto_register_walletmind_tools is True
 
 
 def test_mcp_config_from_environment(monkeypatch) -> None:
@@ -20,6 +21,7 @@ def test_mcp_config_from_environment(monkeypatch) -> None:
     monkeypatch.setenv("WALLETMIND_MCP_AUTH_ENABLED", "true")
     monkeypatch.setenv("WALLETMIND_MCP_SESSION_MANAGEMENT_ENABLED", "1")
     monkeypatch.setenv("WALLETMIND_MCP_STREAMING_ENABLED", "yes")
+    monkeypatch.setenv("WALLETMIND_MCP_AUTO_REGISTER_TOOLS", "false")
 
     config = MCPServerConfig.from_environment()
 
@@ -30,3 +32,4 @@ def test_mcp_config_from_environment(monkeypatch) -> None:
     assert config.auth_enabled is True
     assert config.session_management_enabled is True
     assert config.streaming_enabled is True
+    assert config.auto_register_walletmind_tools is False
