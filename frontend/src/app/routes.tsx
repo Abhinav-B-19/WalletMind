@@ -73,7 +73,10 @@ export const appRoutes = createRoutesFromElements(
       <Route path="settings" element={<AppSettingsPage />} />
     </Route>
 
-    <Route path="/agent-playground" element={<Navigate to="/app/agent-playground" replace />} />
+    <Route
+      path="/agent-playground"
+      element={<Navigate to="/app/agent-playground" replace />}
+    />
 
     <Route path="*" element={<NotFoundPage />} />
   </>,

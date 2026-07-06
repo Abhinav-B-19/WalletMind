@@ -72,3 +72,28 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes results-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(109, 226, 206, 0.45);
+    background-color: rgba(109, 226, 206, 0.08);
+  }
+
+  60% {
+    box-shadow: 0 0 0 6px rgba(109, 226, 206, 0.12);
+    background-color: rgba(109, 226, 206, 0.1);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(109, 226, 206, 0);
+    background-color: rgba(109, 226, 206, 0.06);
+  }
+}
+
+.results-highlight-animated {
+  animation: results-highlight-pulse 900ms var(--easing-standard) 2;
+}
+
+.results-highlight-reduced-motion {
+  animation: none;
+}
