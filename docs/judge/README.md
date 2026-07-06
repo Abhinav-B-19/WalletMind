@@ -75,4 +75,3 @@ High-level flow:
 2. Run Scenario 1 and Scenario 4 from [Demo Guide](./DEMO_GUIDE.md).
 3. Review architecture diagrams in [Architecture](./ARCHITECTURE.md).
 4. Validate rubric alignment in [Rubric Mapping](./RUBRIC_MAPPING.md).
-5. Use [Judge Checklist](./JUDGE_CHECKLIST.md) for final scoring confidence.
