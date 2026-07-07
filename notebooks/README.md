@@ -1,0 +1,60 @@
+# WalletMind Kaggle Notebooks
+
+This folder contains the Kaggle-facing notebook experience for WalletMind.
+
+## K1 Deliverable
+
+- `walletmind_capstone_submission.ipynb`
+  - Production-quality notebook foundation
+  - Rich markdown narrative and visual storytelling
+  - Reuses existing repository docs and assets
+  - No runtime API calls (offline-renderable)
+
+## Folder Structure
+
+- `helpers/`
+  - Reusable rendering utilities for K1-K4 notebook phases
+  - Includes: `render_title`, `render_callout`, `render_badge`, `render_section`, `render_card`, `render_table`
+- `assets/`
+  - Notebook-local assets if needed in future phases
+  - K1 intentionally reuses root `../assets/` artifacts
+
+## Reused Assets (K1)
+
+Architecture:
+
+- `../assets/diagrams/walletmind-architecture-overview.png`
+
+Product screenshots:
+
+- `../assets/screenshots/landing-page.png`
+- `../assets/screenshots/dashboard.png`
+- `../assets/screenshots/upload.png`
+- `../assets/screenshots/agent-playground.png`
+- `../assets/screenshots/judge-hub.png`
+- `../assets/screenshots/health-card.png`
+- `../assets/screenshots/budget-card.png`
+- `../assets/screenshots/insights-card.png`
+- `../assets/screenshots/report-card.png`
+- `../assets/screenshots/assistant-card.png`
+- `../assets/screenshots/swagger-rest.png`
+- `../assets/screenshots/swagger-mcp.png`
+
+## Source Documentation Reused
+
+- `../README.md`
+- `../docs/judge/README.md`
+- `../docs/judge/JUDGE_CHECKLIST.md`
+- `../docs/judge/RUBRIC_MAPPING.md`
+- `../docs/judge/QUICK_START.md`
+- `../docs/judge/API_EXAMPLES.md`
+- `../docs/mcp-architecture.md`
+- `../docs/mcp-tools.md`
+- `../docs/architecture/overview.md`
+- `../docs/screenshots/README.md`
+- `../docs/evaluation/kaggle_mapping.md`
+
+## Validation Notes
+
+K1 notebook is intentionally static-first and does not require backend/frontend/database availability.
+This ensures top-to-bottom execution in isolated notebook environments.
