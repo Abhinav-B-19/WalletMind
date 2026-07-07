@@ -2,14 +2,19 @@
 
 This folder contains the Kaggle-facing notebook experience for WalletMind and stays terminology-aligned with the main architecture and judge documentation.
 
-## K1 Deliverable
+## Official Submission Notebook
 
 - `walletmind_capstone_submission.ipynb`
-  - Production-quality notebook foundation
-  - Rich markdown narrative and visual storytelling
-  - Reuses existing repository docs and assets
-  - No runtime API calls (offline-renderable)
+  - Single official Kaggle submission notebook
+  - Judge-first executive structure with rubric mapping and deployment verification
+  - Executed top-to-bottom with saved outputs
   - Uses the same architecture language as `README.md` and `docs/judge/ARCHITECTURE.md` (Coordinator, Specialized Agents, Function Tools, MCP, shared REST/MCP core)
+
+## Exported Artifact
+
+- `exported/walletmind_capstone_submission.html`
+  - Generated from the executed notebook
+  - Ready for browser-based review and sharing
 
 ## Folder Structure
 
