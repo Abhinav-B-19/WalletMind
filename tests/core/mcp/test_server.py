@@ -95,6 +95,24 @@ def test_health_metadata_and_tools_endpoints() -> None:
     assert tools.json() == []
 
 
+def test_root_landing_endpoint_returns_dynamic_tool_count() -> None:
+    app = create_mcp_app(config=MCPServerConfig(auto_register_walletmind_tools=True))
+
+    with TestClient(app) as client:
+        root = client.get("/")
+        tools = client.get("/mcp/tools")
+
+    assert root.status_code == 200
+    payload = root.json()
+    assert payload["service"] == "WalletMind MCP Server"
+    assert payload["status"] == "running"
+    assert payload["documentation"] == "/docs"
+    assert payload["metadata"] == "/mcp/metadata"
+    assert payload["tools"] == "/mcp/tools"
+    assert isinstance(payload["version"], str)
+    assert payload["registered_tools"] == len(tools.json())
+
+
 def test_tool_registration_and_removal_endpoints() -> None:
     app = create_mcp_app(config=MCPServerConfig(auto_register_walletmind_tools=False))
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 import threading
@@ -74,6 +75,42 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    @app.get("/")
+    async def root() -> dict[str, object]:
+        frontend_url = os.getenv("FRONTEND_URL", "See deployment README")
+        return {
+            "service": "WalletMind REST API",
+            "description": (
+                "AI-first Financial Intelligence Platform powered by Google ADK, "
+                "Multi-Agent Orchestration, and FastAPI."
+            ),
+            "status": "running",
+            "version": app.version,
+            "documentation": "/docs",
+            "openapi": "/openapi.json",
+            "health": "/health",
+            "judge_hub": "Frontend -> /app/judge",
+            "frontend": frontend_url,
+            "features": [
+                "Statement Processing",
+                "Financial Health",
+                "Spending Insights",
+                "Budget Recommendations",
+                "Monthly Reports",
+                "AI Assistant",
+                "Coordinator Agent",
+                "Multi-Agent Execution",
+            ],
+        }
+
+    @app.get("/health")
+    async def health() -> dict[str, str]:
+        return {
+            "service": "WalletMind REST API",
+            "status": "running",
+            "version": app.version,
+        }
 
     init_database()
 

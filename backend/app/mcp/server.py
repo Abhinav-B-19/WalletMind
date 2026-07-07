@@ -297,6 +297,24 @@ def create_mcp_app(
         lifespan=lifespan,
     )
 
+    @app.get("/")
+    async def root() -> dict[str, object]:
+        return {
+            "service": "WalletMind MCP Server",
+            "description": (
+                "Standalone Model Context Protocol (MCP) server exposing WalletMind "
+                "AI capabilities."
+            ),
+            "status": "running",
+            "version": infrastructure_server.config.server_version,
+            "documentation": "/docs",
+            "metadata": "/mcp/metadata",
+            "health": "/mcp/health",
+            "tools": "/mcp/tools",
+            "transport": infrastructure_server.config.transport,
+            "registered_tools": infrastructure_server.registry.size,
+        }
+
     @app.get("/mcp/health", response_model=HealthResponse)
     async def health() -> HealthResponse:
         return infrastructure_server.health()
