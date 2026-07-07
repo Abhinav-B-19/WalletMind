@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -26,7 +26,7 @@ describe("Sidebar", () => {
     );
   });
 
-  it("logout clears only active user session", () => {
+  it("logout clears only active user session", async () => {
     localStorage.setItem(
       USER_STORAGE_KEY,
       JSON.stringify({
@@ -49,6 +49,8 @@ describe("Sidebar", () => {
         },
       ]),
     );
+    localStorage.setItem("walletmind_ai_configured", "true");
+    localStorage.setItem("walletmind_ai_source", "session");
 
     render(
       <MemoryRouter>
@@ -58,9 +60,13 @@ describe("Sidebar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Logout" }));
 
-    expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
-    expect(
-      localStorage.getItem(REMEMBERED_PROFILES_STORAGE_KEY),
-    ).not.toBeNull();
+    await waitFor(() => {
+      expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem("walletmind_ai_configured")).toBeNull();
+      expect(localStorage.getItem("walletmind_ai_source")).toBeNull();
+      expect(
+        localStorage.getItem(REMEMBERED_PROFILES_STORAGE_KEY),
+      ).not.toBeNull();
+    });
   });
 });

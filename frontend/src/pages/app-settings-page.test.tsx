@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppSettingsPage } from "@/pages/app-settings-page";
 import * as statementsApi from "@/lib/api/statements";
@@ -14,6 +14,59 @@ import {
 vi.mock("@/features/ai-dashboard/hooks", () => ({
   useAIHealth: vi.fn(),
   useProcessedStatements: vi.fn(),
+}));
+
+vi.mock("@/features/ai-key/gemini-api-key-manager", () => ({
+  GeminiApiKeyManager: (props: {
+    onNotification?: (payload: {
+      variant: "success" | "warning" | "error";
+      title: string;
+      description: string;
+      autoDismissMs?: number;
+    }) => void;
+  }) => (
+    <div data-testid="gemini-api-key-manager">
+      <button
+        type="button"
+        onClick={() =>
+          props.onNotification?.({
+            variant: "success",
+            title: "API Key Updated Successfully",
+            description: "Updated",
+            autoDismissMs: 5000,
+          })
+        }
+      >
+        emit-success
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onNotification?.({
+            variant: "success",
+            title: "API Key Updated Successfully",
+            description: "Updated",
+            autoDismissMs: 10,
+          })
+        }
+      >
+        emit-success-fast
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onNotification?.({
+            variant: "warning",
+            title: "API Key Removed",
+            description: "Removed",
+            autoDismissMs: 5000,
+          })
+        }
+      >
+        emit-remove
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/lib/auth/storage", () => ({
@@ -112,6 +165,10 @@ describe("AppSettingsPage", () => {
     ]);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders all major settings sections", async () => {
     render(<AppSettingsPage />, { wrapper: createWrapper() });
 
@@ -121,6 +178,7 @@ describe("AppSettingsPage", () => {
     expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("Application")).toBeInTheDocument();
     expect(screen.getByText("AI Configuration")).toBeInTheDocument();
+    expect(screen.getByTestId("gemini-api-key-manager")).toBeInTheDocument();
     expect(screen.getByText("Data Management")).toBeInTheDocument();
     expect(screen.getByText("Privacy & Security")).toBeInTheDocument();
     expect(screen.getByText("Application Features")).toBeInTheDocument();
@@ -166,5 +224,45 @@ describe("AppSettingsPage", () => {
     render(<AppSettingsPage />, { wrapper: createWrapper() });
 
     expect(await screen.findAllByText("Unhealthy")).toHaveLength(2);
+  });
+
+  it("shows and manually dismisses settings AI success banner", async () => {
+    render(<AppSettingsPage />, { wrapper: createWrapper() });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "emit-success" }),
+    );
+    expect(
+      await screen.findByText("API Key Updated Successfully"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss AI settings banner" }),
+    );
+    expect(
+      screen.queryByText("API Key Updated Successfully"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-dismisses settings AI banner after 5 seconds", async () => {
+    render(<AppSettingsPage />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getByRole("button", { name: "emit-success-fast" }));
+    expect(
+      screen.getByText("API Key Updated Successfully"),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("API Key Updated Successfully"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows removal banner in settings", async () => {
+    render(<AppSettingsPage />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getByRole("button", { name: "emit-remove" }));
+    expect(await screen.findByText("API Key Removed")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,7 @@
 const USER_STORAGE_KEY = "walletmind_user";
 const REMEMBERED_PROFILES_STORAGE_KEY = "walletmind_profiles";
+const AI_KEY_CONFIGURED_STORAGE_KEY = "walletmind_ai_configured";
+const AI_KEY_SOURCE_STORAGE_KEY = "walletmind_ai_source";
 
 export type StoredWalletMindUser = {
   id: string;
@@ -60,6 +62,8 @@ export function setStoredUser(user: StoredWalletMindUser): void {
 
 export function clearStoredUser(): void {
   localStorage.removeItem(USER_STORAGE_KEY);
+  localStorage.removeItem(AI_KEY_CONFIGURED_STORAGE_KEY);
+  localStorage.removeItem(AI_KEY_SOURCE_STORAGE_KEY);
 }
 
 export function hasStoredUser(): boolean {

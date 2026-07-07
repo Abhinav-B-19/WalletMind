@@ -11,7 +11,16 @@ from backend.app.services.ai.exceptions import (
     AIConfigurationError,
     AIRateLimitError,
     AIResponseError,
+    AISessionExpiredError,
     AIServiceError,
+    AIUserKeyInvalidError,
+    AIUserKeyInvalidFormatError,
+    AIUserKeyNetworkError,
+    AIUserKeyPermissionDeniedError,
+    AIUserKeyQuotaExceededError,
+    AIUserKeySDKCompatibilityError,
+    AIUserKeyUnsupportedAuthKeyError,
+    AIUserKeyUnknownError,
 )
 from walletmind.exceptions import (
     AssistantNoDataError,
@@ -155,6 +164,120 @@ def register_error_handlers(app: FastAPI) -> None:
             },
         )
 
+    @app.exception_handler(AIUserKeyInvalidError)
+    async def ai_user_key_invalid_handler(
+        request: Request, exc: AIUserKeyInvalidError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "code": "AI_KEY_INVALID",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeyInvalidFormatError)
+    async def ai_user_key_invalid_format_handler(
+        request: Request, exc: AIUserKeyInvalidFormatError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "code": "AI_KEY_INVALID_FORMAT",
+                "message": str(exc),
+                "details": {
+                    "supported_prefixes": ["AIza", "AQ"],
+                },
+            },
+        )
+
+    @app.exception_handler(AIUserKeyNetworkError)
+    async def ai_user_key_network_error_handler(
+        request: Request, exc: AIUserKeyNetworkError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "success": False,
+                "code": "AI_KEY_NETWORK_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeyQuotaExceededError)
+    async def ai_user_key_quota_error_handler(
+        request: Request, exc: AIUserKeyQuotaExceededError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "success": False,
+                "code": "AI_KEY_QUOTA_EXCEEDED",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeyPermissionDeniedError)
+    async def ai_user_key_permission_error_handler(
+        request: Request, exc: AIUserKeyPermissionDeniedError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "code": "AI_KEY_PERMISSION_DENIED",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeyUnsupportedAuthKeyError)
+    async def ai_user_key_unsupported_auth_key_handler(
+        request: Request, exc: AIUserKeyUnsupportedAuthKeyError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "code": "AI_KEY_UNSUPPORTED_AUTH_KEY",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeySDKCompatibilityError)
+    async def ai_user_key_sdk_compatibility_handler(
+        request: Request, exc: AIUserKeySDKCompatibilityError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "code": "AI_KEY_SDK_INCOMPATIBLE",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AIUserKeyUnknownError)
+    async def ai_user_key_unknown_error_handler(
+        request: Request, exc: AIUserKeyUnknownError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "code": "AI_KEY_UNKNOWN_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
     @app.exception_handler(AIConfigurationError)
     async def ai_configuration_handler(
         request: Request, exc: AIConfigurationError
@@ -164,6 +287,20 @@ def register_error_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "code": "AI_CONFIGURATION_ERROR",
+                "message": str(exc),
+                "details": None,
+            },
+        )
+
+    @app.exception_handler(AISessionExpiredError)
+    async def ai_session_expired_handler(
+        request: Request, exc: AISessionExpiredError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "success": False,
+                "code": "AI_SESSION_EXPIRED",
                 "message": str(exc),
                 "details": None,
             },

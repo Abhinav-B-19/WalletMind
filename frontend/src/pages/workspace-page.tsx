@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageTitle, SectionTitle } from "@/components/ui/section-title";
 import { StatCard } from "@/components/ui/stat-card";
+import { GeminiApiKeyManager } from "@/features/ai-key/gemini-api-key-manager";
 import { getStoredUser } from "@/lib/auth/storage";
 import { listStatements, type UploadedStatement } from "@/lib/api/statements";
 
@@ -194,6 +195,10 @@ export function WorkspacePage() {
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      <section aria-label="Gemini API key configuration prompt">
+        <GeminiApiKeyManager compact hideWhenConfigured />
       </section>
 
       <section className="space-y-4" aria-label="Financial snapshot section">

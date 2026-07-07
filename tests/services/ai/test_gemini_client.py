@@ -15,47 +15,73 @@ from backend.app.services.ai.gemini_client import GeminiClient
 from backend.app.services.ai.models import AIRequest
 
 
-class FakeModelClient:
-    def __init__(self, *, response: Any = None, error: Exception | None = None) -> None:
-        self._response = response
-        self._error = error
-        self.last_prompt: str | None = None
-        self.last_generation_config: dict[str, Any] | None = None
-
-    def generate_content(self, prompt: str, generation_config: dict[str, Any]) -> Any:
-        self.last_prompt = prompt
-        self.last_generation_config = generation_config
-        if self._error is not None:
-            raise self._error
-        return self._response
-
-
-class UnsupportedJsonModeThenSuccessModelClient:
+class UnsupportedJsonModeThenSuccessModelsAPI:
     def __init__(self, response: Any) -> None:
         self._response = response
         self.calls = 0
         self.configs: list[dict[str, Any]] = []
+        self.last_model: str | None = None
+        self.last_contents: str | None = None
 
-    def generate_content(self, prompt: str, generation_config: dict[str, Any]) -> Any:
+    def generate_content(self, *, model: str, contents: str, config: dict[str, Any]) -> Any:
         self.calls += 1
-        self.configs.append(generation_config)
+        self.last_model = model
+        self.last_contents = contents
+        self.configs.append(config)
         if self.calls == 1:
             raise TypeError("Unknown field: response_schema")
         return self._response
 
+    def list(self, *, config: dict[str, Any]) -> Any:  # noqa: ARG002
+        return iter([SimpleNamespace(name="gemini-2.5-flash")])
+
+
+class FakeModelsAPI:
+    def __init__(
+        self,
+        *,
+        response: Any = None,
+        generate_error: Exception | None = None,
+        list_error: Exception | None = None,
+        list_items: list[Any] | None = None,
+    ) -> None:
+        self._response = response
+        self._generate_error = generate_error
+        self._list_error = list_error
+        self._list_items = list_items if list_items is not None else [SimpleNamespace(name="gemini-2.5-flash")]
+        self.last_generate_model: str | None = None
+        self.last_generate_contents: str | None = None
+        self.last_generate_config: dict[str, Any] | None = None
+        self.last_list_config: dict[str, Any] | None = None
+
+    def generate_content(self, *, model: str, contents: str, config: dict[str, Any]) -> Any:
+        self.last_generate_model = model
+        self.last_generate_contents = contents
+        self.last_generate_config = config
+        if self._generate_error is not None:
+            raise self._generate_error
+        return self._response
+
+    def list(self, *, config: dict[str, Any]) -> Any:
+        self.last_list_config = config
+        if self._list_error is not None:
+            raise self._list_error
+        return iter(self._list_items)
+
+
+class FakeSDKClient:
+    def __init__(self, models: Any) -> None:
+        self.models = models
+
 
 class FakeSDKModule:
-    def __init__(self, model_client: FakeModelClient) -> None:
-        self.model_client = model_client
-        self.configure_api_key: str | None = None
-        self.model_name: str | None = None
+    def __init__(self, sdk_client: FakeSDKClient) -> None:
+        self._sdk_client = sdk_client
+        self.created_api_keys: list[str] = []
 
-    def configure(self, *, api_key: str) -> None:
-        self.configure_api_key = api_key
-
-    def GenerativeModel(self, model_name: str) -> FakeModelClient:  # noqa: N802
-        self.model_name = model_name
-        return self.model_client
+    def Client(self, *, api_key: str) -> FakeSDKClient:  # noqa: N802
+        self.created_api_keys.append(api_key)
+        return self._sdk_client
 
 
 class StubSettings:
@@ -79,7 +105,7 @@ def _make_success_response() -> Any:
         candidates_token_count=11,
         total_token_count=18,
     )
-    candidate = SimpleNamespace(finish_reason="STOP")
+    candidate = SimpleNamespace(finish_reason=SimpleNamespace(name="STOP"))
     return SimpleNamespace(
         text="Generated answer",
         usage_metadata=usage_metadata,
@@ -89,9 +115,8 @@ def _make_success_response() -> Any:
 
 def test_gemini_client_initializes_lazily() -> None:
     load_calls = {"count": 0}
-    sdk_module = FakeSDKModule(
-        model_client=FakeModelClient(response=_make_success_response())
-    )
+    models = FakeModelsAPI(response=_make_success_response())
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
 
     def _loader() -> FakeSDKModule:
         load_calls["count"] += 1
@@ -114,8 +139,8 @@ def test_gemini_client_initializes_lazily() -> None:
     )
 
     assert load_calls["count"] == 1
-    assert sdk_module.configure_api_key == "env-key"
-    assert sdk_module.model_name == "gemini-2.5-flash"
+    assert sdk_module.created_api_keys == ["env-key"]
+    assert models.last_generate_model == "gemini-2.5-flash"
     assert response.text == "Generated answer"
     assert response.total_tokens == 18
 
@@ -149,9 +174,8 @@ def test_gemini_client_invalid_max_tokens_raises() -> None:
 
 
 def test_gemini_client_timeout_maps_to_service_error() -> None:
-    sdk_module = FakeSDKModule(
-        model_client=FakeModelClient(error=TimeoutError("timeout"))
-    )
+    models = FakeModelsAPI(generate_error=TimeoutError("timeout"))
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(
         api_key="k",
         sdk_loader=lambda: sdk_module,
@@ -169,9 +193,8 @@ def test_gemini_client_timeout_maps_to_service_error() -> None:
 
 
 def test_gemini_client_rate_limit_maps_to_custom_error() -> None:
-    sdk_module = FakeSDKModule(
-        model_client=FakeModelClient(error=RuntimeError("rate limit exceeded"))
-    )
+    models = FakeModelsAPI(generate_error=RuntimeError("rate limit exceeded"))
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(
         api_key="k",
         sdk_loader=lambda: sdk_module,
@@ -189,11 +212,8 @@ def test_gemini_client_rate_limit_maps_to_custom_error() -> None:
 
 
 def test_gemini_client_empty_response_raises() -> None:
-    sdk_module = FakeSDKModule(
-        model_client=FakeModelClient(
-            response=SimpleNamespace(text="   ", candidates=[])
-        )
-    )
+    models = FakeModelsAPI(response=SimpleNamespace(text="   ", candidates=[]))
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(
         api_key="k",
         sdk_loader=lambda: sdk_module,
@@ -211,9 +231,8 @@ def test_gemini_client_empty_response_raises() -> None:
 
 
 def test_gemini_client_invalid_request_prompts_raise() -> None:
-    sdk_module = FakeSDKModule(
-        model_client=FakeModelClient(response=_make_success_response())
-    )
+    models = FakeModelsAPI(response=_make_success_response())
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
 
     with pytest.raises(AIResponseError, match="must not be empty"):
@@ -230,15 +249,16 @@ def test_gemini_client_invalid_request_prompts_raise() -> None:
 def test_configuration_status_handles_missing_api_key() -> None:
     client = GeminiClient(api_key="")
 
-    configured, model = client.get_configuration_status()
+    configured, model, source = client.get_configuration_status()
 
     assert configured is False
     assert model == "gemini-2.5-flash"
+    assert source == "none"
 
 
 def test_gemini_client_passes_json_mode_generation_config() -> None:
-    model_client = FakeModelClient(response=_make_success_response())
-    sdk_module = FakeSDKModule(model_client=model_client)
+    models = FakeModelsAPI(response=_make_success_response())
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
 
     request = client.build_request(
@@ -254,16 +274,14 @@ def test_gemini_client_passes_json_mode_generation_config() -> None:
     )
     client.generate(request)
 
-    assert model_client.last_generation_config is not None
-    assert (
-        model_client.last_generation_config["response_mime_type"] == "application/json"
-    )
-    assert "response_schema" in model_client.last_generation_config
+    assert models.last_generate_config is not None
+    assert models.last_generate_config["response_mime_type"] == "application/json"
+    assert "response_schema" in models.last_generate_config
 
 
 def test_gemini_client_generation_config_copies_schema_object() -> None:
-    model_client = FakeModelClient(response=_make_success_response())
-    sdk_module = FakeSDKModule(model_client=model_client)
+    models = FakeModelsAPI(response=_make_success_response())
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
 
     schema = {
@@ -278,16 +296,16 @@ def test_gemini_client_generation_config_copies_schema_object() -> None:
     )
     client.generate(request)
 
-    assert model_client.last_generation_config is not None
-    assert model_client.last_generation_config["response_schema"] == schema
-    assert model_client.last_generation_config["response_schema"] is not schema
+    assert models.last_generate_config is not None
+    assert models.last_generate_config["response_schema"] == schema
+    assert models.last_generate_config["response_schema"] is not schema
 
 
 def test_gemini_client_falls_back_when_json_mode_not_supported() -> None:
-    model_client = UnsupportedJsonModeThenSuccessModelClient(
+    models = UnsupportedJsonModeThenSuccessModelsAPI(
         response=_make_success_response()
     )
-    sdk_module = FakeSDKModule(model_client=model_client)
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
     client = GeminiClient(api_key="k", sdk_loader=lambda: sdk_module)
 
     request = client.build_request(
@@ -299,6 +317,17 @@ def test_gemini_client_falls_back_when_json_mode_not_supported() -> None:
     response = client.generate(request)
 
     assert response.text == "Generated answer"
-    assert model_client.calls == 2
-    assert "response_schema" in model_client.configs[0]
-    assert "response_schema" not in model_client.configs[1]
+    assert models.calls == 2
+    assert "response_schema" in models.configs[0]
+    assert "response_schema" not in models.configs[1]
+
+
+def test_validate_api_key_lightweight_uses_list_models() -> None:
+    models = FakeModelsAPI(response=_make_success_response())
+    sdk_module = FakeSDKModule(sdk_client=FakeSDKClient(models=models))
+    client = GeminiClient(api_key="AQ-test-key", sdk_loader=lambda: sdk_module)
+
+    client.validate_api_key_lightweight()
+
+    assert sdk_module.created_api_keys == ["AQ-test-key"]
+    assert models.last_list_config == {"page_size": 1}

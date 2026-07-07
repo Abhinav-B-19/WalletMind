@@ -16,6 +16,8 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
 import { PageTitle } from "@/components/ui/section-title";
+import { logoutUserSession } from "@/lib/api/users";
+import { clearAIKeyStatus } from "@/lib/auth/ai-key-storage";
 import { listUsers } from "@/lib/api/users";
 import {
   clearStoredUser,
@@ -110,8 +112,15 @@ export function LoginPage() {
     navigate("/app/judge", { replace: true });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutUserSession();
+    } catch {
+      // Best-effort backend session cleanup.
+    }
+
     clearStoredUser();
+    clearAIKeyStatus();
     navigate("/", { replace: true });
   };
 
@@ -165,7 +174,12 @@ export function LoginPage() {
                 >
                   Create Different Profile
                 </Button>
-                <Button variant="secondary" onClick={handleLogout}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    void handleLogout();
+                  }}
+                >
                   Logout
                 </Button>
               </div>

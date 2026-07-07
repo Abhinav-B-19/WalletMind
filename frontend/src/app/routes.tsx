@@ -1,6 +1,7 @@
 import { Navigate, createRoutesFromElements, Route } from "react-router-dom";
 
 import {
+  AIFeatureRoute,
   ProtectedRoute,
   PublicOnlyRoute,
 } from "@/components/auth/route-guards";
@@ -63,15 +64,64 @@ export const appRoutes = createRoutesFromElements(
       <Route index element={<Navigate to="judge" replace />} />
       <Route path="judge" element={<JudgeHubPage />} />
       <Route path="home" element={<WorkspacePage />} />
-      <Route path="agent-playground" element={<AppAgentPlaygroundPage />} />
+      <Route
+        path="agent-playground"
+        element={
+          <AIFeatureRoute>
+            <AppAgentPlaygroundPage />
+          </AIFeatureRoute>
+        }
+      />
       <Route path="statements" element={<AppStatementsPage />} />
       <Route path="statements/upload" element={<AppStatementUploadPage />} />
-      <Route path="dashboard" element={<AppDashboardPage />} />
-      <Route path="budget" element={<AppBudgetRecommendationsPage />} />
-      <Route path="insights" element={<AppInsightsPage />} />
-      <Route path="health" element={<AppFinancialHealthPage />} />
-      <Route path="planner" element={<AppPlannerPage />} />
-      <Route path="chat" element={<AppChatPage />} />
+      <Route
+        path="dashboard"
+        element={
+          <AIFeatureRoute>
+            <AppDashboardPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="budget"
+        element={
+          <AIFeatureRoute>
+            <AppBudgetRecommendationsPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="insights"
+        element={
+          <AIFeatureRoute>
+            <AppInsightsPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="health"
+        element={
+          <AIFeatureRoute>
+            <AppFinancialHealthPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="planner"
+        element={
+          <AIFeatureRoute>
+            <AppPlannerPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="chat"
+        element={
+          <AIFeatureRoute>
+            <AppChatPage />
+          </AIFeatureRoute>
+        }
+      />
       <Route path="settings" element={<AppSettingsPage />} />
     </Route>
 

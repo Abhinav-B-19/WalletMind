@@ -74,6 +74,11 @@ class AIService:
     def health(self) -> AIHealthStatus:
         """Return AI configuration health without making external provider calls."""
 
-        configured, model = self._gemini_client.get_configuration_status()
+        configured, model, source = self._gemini_client.get_configuration_status()
         status = "healthy" if configured else "unhealthy"
-        return AIHealthStatus(configured=configured, model=model, status=status)
+        return AIHealthStatus(
+            configured=configured,
+            model=model,
+            status=status,
+            source=source,
+        )

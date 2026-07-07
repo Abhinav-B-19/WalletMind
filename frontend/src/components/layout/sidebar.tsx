@@ -15,6 +15,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { logoutUserSession } from "@/lib/api/users";
+import { clearAIKeyStatus } from "@/lib/auth/ai-key-storage";
 import { clearStoredUser } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils";
 
@@ -75,8 +77,15 @@ const links = [
 export function Sidebar() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutUserSession();
+    } catch {
+      // Best-effort backend session cleanup.
+    }
+
     clearStoredUser();
+    clearAIKeyStatus();
     navigate("/", { replace: true });
   };
 
@@ -118,7 +127,7 @@ export function Sidebar() {
           <Button
             variant="secondary"
             className="w-full justify-start gap-3"
-            onClick={handleLogout}
+            onClick={() => void handleLogout()}
           >
             <LogOut className="h-[var(--icon-md)] w-[var(--icon-md)]" />
             Logout

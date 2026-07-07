@@ -5,6 +5,10 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { WorkspacePage } from "@/pages/workspace-page";
 import * as statementsApi from "@/lib/api/statements";
 
+vi.mock("@/features/ai-key/gemini-api-key-manager", () => ({
+  GeminiApiKeyManager: () => <div data-testid="gemini-key-manager" />,
+}));
+
 describe("WorkspacePage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

@@ -7,9 +7,10 @@ from backend.app.services.ai.models import AIHealthStatus
 
 
 class StubAIService:
-    def __init__(self, configured: bool, model: str) -> None:
+    def __init__(self, configured: bool, model: str, source: str = "none") -> None:
         self._configured = configured
         self._model = model
+        self._source = source
 
     def health(self) -> AIHealthStatus:
         status = "healthy" if self._configured else "unhealthy"
@@ -17,6 +18,7 @@ class StubAIService:
             configured=self._configured,
             model=self._model,
             status=status,
+            source=self._source,
         )
 
 
@@ -35,6 +37,7 @@ def test_ai_health_endpoint_healthy() -> None:
         "configured": True,
         "model": "gemini-1.5-flash",
         "status": "healthy",
+        "source": "none",
     }
 
 

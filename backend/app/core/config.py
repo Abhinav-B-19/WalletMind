@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Final
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -23,15 +23,28 @@ class AppSettings(BaseSettings):
     database_url: str = Field(default=f"sqlite:///{DATABASE_FILE.as_posix()}")
     allowed_origins: str = Field(default="http://localhost:5173")
 
-    gemini_api_key: str = Field(..., min_length=1)
+    gemini_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    )
     gemini_model: str = Field(default="gemini-2.5-flash", min_length=1)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_output_tokens: int = Field(default=1024, ge=1)
+    developer_mode: bool = Field(default=False)
+
+    session_secret_key: str = Field(
+        default="walletmind-dev-session-secret-change-me",
+        min_length=16,
+    )
+    session_cookie_name: str = Field(default="walletmind_session", min_length=1)
+    session_max_age_seconds: int = Field(default=8 * 60 * 60, ge=300)
+    session_cookie_secure: bool = Field(default=False)
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
 

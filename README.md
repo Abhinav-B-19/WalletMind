@@ -109,14 +109,14 @@ Traditional finance apps visualize historical transactions. WalletMind reasons a
 
 ## Google AI Agents Concepts Demonstrated
 
-| Concept | Implementation |
-| --- | --- |
-| Google ADK | Coordinator + specialized ADK agents |
-| Multi-Agent | Coordinator capability routing and aggregation |
-| Function Tools | WalletMind Function Tool layer in `backend/app/tools/` |
-| MCP | Standalone MCP server + adapter + registry |
-| Shared Services | Single source of business logic in WalletMind services |
-| Explainability | Decision records, timeline traces, and per-agent outputs |
+| Concept         | Implementation                                           |
+| --------------- | -------------------------------------------------------- |
+| Google ADK      | Coordinator + specialized ADK agents                     |
+| Multi-Agent     | Coordinator capability routing and aggregation           |
+| Function Tools  | WalletMind Function Tool layer in `backend/app/tools/`   |
+| MCP             | Standalone MCP server + adapter + registry               |
+| Shared Services | Single source of business logic in WalletMind services   |
+| Explainability  | Decision records, timeline traces, and per-agent outputs |
 
 ## AI Execution Flow
 
@@ -132,16 +132,16 @@ flowchart TD
 
 ## Technology Stack
 
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| Frontend | React + TypeScript + Vite | Interactive financial product UX |
-| State/Data | React Query + Axios | Async API state and request orchestration |
-| Backend API | FastAPI + Pydantic | Versioned API contracts and validation |
-| Persistence | SQLAlchemy | Statement, transaction, and analysis storage |
-| AI Runtime | Google ADK + Gemini | Planner-driven agent reasoning |
-| Tool Boundary | ADK FunctionTool | Deterministic service invocation contracts |
-| Protocol Interop | Model Context Protocol (MCP) | Tool discovery and execution for AI hosts |
-| Testing | Pytest + Vitest + Testing Library | Backend and frontend quality gates |
+| Layer            | Technology                        | Purpose                                      |
+| ---------------- | --------------------------------- | -------------------------------------------- |
+| Frontend         | React + TypeScript + Vite         | Interactive financial product UX             |
+| State/Data       | React Query + Axios               | Async API state and request orchestration    |
+| Backend API      | FastAPI + Pydantic                | Versioned API contracts and validation       |
+| Persistence      | SQLAlchemy                        | Statement, transaction, and analysis storage |
+| AI Runtime       | Google ADK + Gemini               | Planner-driven agent reasoning               |
+| Tool Boundary    | ADK FunctionTool                  | Deterministic service invocation contracts   |
+| Protocol Interop | Model Context Protocol (MCP)      | Tool discovery and execution for AI hosts    |
+| Testing          | Pytest + Vitest + Testing Library | Backend and frontend quality gates           |
 
 ## Quick Start
 
@@ -202,15 +202,15 @@ MCP: `http://127.0.0.1:8100`
 
 ## Judge Resources
 
-| Resource | Description |
-| --- | --- |
-| [📘 Quick Start](docs/judge/QUICK_START.md) | Fastest local setup path for evaluation. |
-| [🏗 Architecture](docs/judge/ARCHITECTURE.md) | System design, diagrams, and execution topology. |
-| [🎯 Rubric Mapping](docs/judge/RUBRIC_MAPPING.md) | Direct mapping from judging criteria to evidence. |
-| [🧪 API Examples](docs/judge/API_EXAMPLES.md) | Copy-paste REST and MCP validation requests. |
-| [📑 Evaluation Summary](docs/judge/EVALUATION_SUMMARY.md) | Compact capstone evidence cheat sheet. |
-| [▶ Demo Guide](docs/judge/DEMO_GUIDE.md) | Scenario-driven walkthrough for live judging. |
-| [✅ Judge Checklist](docs/judge/JUDGE_CHECKLIST.md) | Fast verification checklist during review. |
+| Resource                                                  | Description                                       |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| [📘 Quick Start](docs/judge/QUICK_START.md)               | Fastest local setup path for evaluation.          |
+| [🏗 Architecture](docs/judge/ARCHITECTURE.md)             | System design, diagrams, and execution topology.  |
+| [🎯 Rubric Mapping](docs/judge/RUBRIC_MAPPING.md)         | Direct mapping from judging criteria to evidence. |
+| [🧪 API Examples](docs/judge/API_EXAMPLES.md)             | Copy-paste REST and MCP validation requests.      |
+| [📑 Evaluation Summary](docs/judge/EVALUATION_SUMMARY.md) | Compact capstone evidence cheat sheet.            |
+| [▶ Demo Guide](docs/judge/DEMO_GUIDE.md)                  | Scenario-driven walkthrough for live judging.     |
+| [✅ Judge Checklist](docs/judge/JUDGE_CHECKLIST.md)       | Fast verification checklist during review.        |
 
 ## Future Roadmap
 

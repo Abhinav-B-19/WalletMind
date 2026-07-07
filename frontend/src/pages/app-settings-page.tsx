@@ -1,18 +1,21 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
   BadgeCheck,
   Bot,
+  CheckCircle2,
   Database,
   Info,
   Lock,
+  X,
   Server,
   Settings2,
   Shield,
   Sparkles,
   UserCircle2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import {
   FeatureBadge,
@@ -25,6 +28,10 @@ import {
 } from "@/components/settings/settings-primitives";
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/section-title";
+import {
+  GeminiApiKeyManager,
+  type GeminiApiKeyNotification,
+} from "@/features/ai-key/gemini-api-key-manager";
 import {
   useAIHealth,
   useProcessedStatements,
@@ -72,6 +79,41 @@ function toTitleCase(value: string): string {
 }
 
 export function AppSettingsPage() {
+  const location = useLocation();
+  const aiSectionRef = useRef<HTMLElement | null>(null);
+  const [aiBanner, setAIBanner] = useState<GeminiApiKeyNotification | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!aiBanner?.autoDismissMs) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setAIBanner(null);
+    }, aiBanner.autoDismissMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [aiBanner]);
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    if (query.get("section") !== "ai") {
+      return;
+    }
+
+    const target = aiSectionRef.current;
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    target.focus({ preventScroll: true });
+  }, [location.search]);
+
   const user = getStoredUser();
 
   const statementsQuery = useQuery({
@@ -267,9 +309,62 @@ export function AppSettingsPage() {
 
       <SettingsSection
         title="AI Configuration"
-        description="Read-only AI provider and model governance settings."
+        description="Manage your session-scoped Gemini API key and review active AI runtime settings."
         icon={<Bot className="h-[var(--icon-lg)] w-[var(--icon-lg)]" />}
       >
+        <section
+          id="ai-settings-section"
+          aria-label="AI Settings"
+          tabIndex={-1}
+          ref={aiSectionRef}
+          className="space-y-3"
+        >
+          {aiBanner ? (
+            <div
+              className={
+                aiBanner.variant === "success"
+                  ? "rounded-[var(--radius-md)] border border-emerald-500/40 bg-emerald-500/12 p-3"
+                  : aiBanner.variant === "warning"
+                    ? "rounded-[var(--radius-md)] border border-amber-400/50 bg-amber-400/12 p-3"
+                    : "rounded-[var(--radius-md)] border border-rose-500/45 bg-rose-500/12 p-3"
+              }
+              data-testid="ai-settings-banner"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-2">
+                    {aiBanner.variant === "success" ? (
+                      <CheckCircle2 className="h-[var(--icon-md)] w-[var(--icon-md)] text-emerald-300" />
+                    ) : aiBanner.variant === "warning" ? (
+                      <Info className="h-[var(--icon-md)] w-[var(--icon-md)] text-amber-200" />
+                    ) : (
+                      <AlertCircle className="h-[var(--icon-md)] w-[var(--icon-md)] text-rose-200" />
+                    )}
+                    <p className="text-sm font-semibold">{aiBanner.title}</p>
+                  </div>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {aiBanner.description}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Dismiss AI settings banner"
+                  onClick={() => setAIBanner(null)}
+                >
+                  <X className="h-[var(--icon-sm)] w-[var(--icon-sm)]" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          <GeminiApiKeyManager
+            context="settings"
+            onNotification={(notification) => setAIBanner(notification)}
+          />
+        </section>
+
         <div
           className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
           data-testid="settings-grid"
@@ -406,10 +501,11 @@ export function AppSettingsPage() {
               persisted in local project storage.
             </p>
           </SettingsCard>
-          <SettingsCard title="API Keys Stored Server Side">
+          <SettingsCard title="API Keys Session Scoped">
             <p className="text-sm text-[var(--text-muted)]">
-              AI provider credentials are read from backend environment
-              variables and are not exposed to browser clients.
+              User-provided Gemini API keys are validated and kept in secure
+              server-side session memory. Keys are not returned to browser
+              clients and are removed on logout.
             </p>
           </SettingsCard>
           <SettingsCard title="Statement Processing Security">

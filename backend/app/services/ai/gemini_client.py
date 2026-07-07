@@ -1,4 +1,4 @@
-"""Gemini SDK client wrapper for resilient AI inference calls."""
+"""Unified Gemini SDK wrapper for inference and lightweight key validation."""
 
 from __future__ import annotations
 
@@ -10,6 +10,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from backend.app.core.config import AppSettings, SettingsLoadError, get_ai_settings
+from backend.app.services.ai.api_key_provider import (
+    get_active_gemini_key,
+    get_gemini_key_status,
+)
 from backend.app.services.ai.exceptions import (
     AIConfigurationError,
     AIRateLimitError,
@@ -42,7 +46,8 @@ class GeminiClient:
         self._sdk_loader = sdk_loader or self._default_sdk_loader
         self._settings_provider = settings_provider or get_ai_settings
         self._sdk_module: Any | None = None
-        self._model_client: Any | None = None
+        self._sdk_client: Any | None = None
+        self._configured_api_key: str | None = None
         self._logger = logger or logging.getLogger(__name__)
 
     def generate(self, request: AIRequest) -> AIResponse:
@@ -50,14 +55,16 @@ class GeminiClient:
 
         self._validate_request(request)
         sdk = self._get_sdk_module()
-        model_client = self._get_model_client(sdk)
+        sdk_client = self._get_sdk_client(sdk)
 
         generation_config = self._build_generation_config(request=request)
         prompt = self._compose_prompt(request=request)
+        model = self._resolve_model()
 
         try:
             raw_response = self._generate_content(
-                model_client=model_client,
+                sdk_client=sdk_client,
+                model=model,
                 prompt=prompt,
                 generation_config=generation_config,
                 request=request,
@@ -74,7 +81,17 @@ class GeminiClient:
 
         return self._parse_response(raw_response)
 
-    def get_configuration_status(self) -> tuple[bool, str]:
+    def validate_api_key_lightweight(self) -> None:
+        """Perform lightweight API key validation against Gemini models list."""
+
+        sdk = self._get_sdk_module()
+        sdk_client = self._get_sdk_client(sdk)
+        models_pager = sdk_client.models.list(config={"page_size": 1})
+        first_page = next(iter(models_pager), None)
+        if first_page is None:
+            raise AIServiceError("No Gemini models available for this API key.")
+
+    def get_configuration_status(self) -> tuple[bool, str, str]:
         """Return a lightweight health snapshot without calling the external API."""
 
         try:
@@ -83,8 +100,17 @@ class GeminiClient:
             self._resolve_temperature()
             self._resolve_max_output_tokens()
         except AIConfigurationError:
-            return False, self._fallback_model_name()
-        return True, model
+            return False, self._fallback_model_name(), "none"
+
+        source = "none"
+        try:
+            source = str(get_gemini_key_status().get("source", "none"))
+        except Exception:
+            settings = self._settings()
+            if settings.developer_mode and settings.gemini_api_key.strip():
+                source = "developer"
+
+        return True, model, source
 
     def build_request(
         self,
@@ -133,15 +159,17 @@ class GeminiClient:
     def _generate_content(
         self,
         *,
-        model_client: Any,
+        sdk_client: Any,
+        model: str,
         prompt: str,
         generation_config: dict[str, Any],
         request: AIRequest,
     ) -> Any:
         try:
-            return model_client.generate_content(
-                prompt,
-                generation_config=generation_config,
+            return sdk_client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=generation_config,
             )
         except Exception as exc:
             if self._is_json_mode_unsupported_error(exc=exc, request=request):
@@ -153,9 +181,10 @@ class GeminiClient:
                     "temperature": request.temperature,
                     "max_output_tokens": request.max_output_tokens,
                 }
-                return model_client.generate_content(
-                    prompt,
-                    generation_config=fallback_config,
+                return sdk_client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=fallback_config,
                 )
             raise
 
@@ -171,19 +200,24 @@ class GeminiClient:
             or "unknown field" in message
             or "unexpected keyword" in message
             or "invalid generation config" in message
+            or "invalid config" in message
         )
 
     def _get_sdk_module(self) -> Any:
         if self._sdk_module is None:
-            self._resolve_api_key()
             self._sdk_module = self._sdk_loader()
-            self._sdk_module.configure(api_key=self._resolve_api_key())
         return self._sdk_module
 
-    def _get_model_client(self, sdk_module: Any) -> Any:
-        if self._model_client is None:
-            self._model_client = sdk_module.GenerativeModel(self._resolve_model())
-        return self._model_client
+    def _get_sdk_client(self, sdk_module: Any) -> Any:
+        api_key = self._resolve_api_key()
+
+        if (
+            self._sdk_client is None
+            or self._configured_api_key != api_key
+        ):
+            self._sdk_client = sdk_module.Client(api_key=api_key)
+            self._configured_api_key = api_key
+        return self._sdk_client
 
     def _compose_prompt(self, request: AIRequest) -> str:
         """Serialize request prompts into one deterministic provider payload."""
@@ -208,9 +242,11 @@ class GeminiClient:
         finish_reason = "unknown"
         candidates = getattr(response, "candidates", None)
         if candidates:
-            finish_reason = str(
-                getattr(candidates[0], "finish_reason", "unknown")
-            ).lower()
+            finish_reason_value = getattr(candidates[0], "finish_reason", "unknown")
+            if hasattr(finish_reason_value, "name"):
+                finish_reason = str(getattr(finish_reason_value, "name", "unknown")).lower()
+            else:
+                finish_reason = str(finish_reason_value).lower()
 
         return AIResponse(
             text=text,
@@ -232,11 +268,20 @@ class GeminiClient:
         self._resolve_max_output_tokens()
 
     def _resolve_api_key(self) -> str:
-        api_key = (
-            self._api_key
-            if self._api_key is not None
-            else self._settings().gemini_api_key
-        )
+        if self._api_key is not None:
+            api_key = self._api_key
+        else:
+            try:
+                api_key = get_active_gemini_key()
+            except AIConfigurationError as exc:
+                settings = self._settings()
+                developer_mode = bool(getattr(settings, "developer_mode", True))
+                configured_key = str(getattr(settings, "gemini_api_key", ""))
+                if developer_mode and configured_key.strip():
+                    api_key = configured_key
+                else:
+                    raise exc
+
         api_key = api_key.strip()
         if not api_key:
             raise AIConfigurationError("GEMINI_API_KEY is not configured.")
@@ -305,9 +350,9 @@ class GeminiClient:
     @staticmethod
     def _default_sdk_loader() -> Any:
         try:
-            import google.generativeai as genai
+            from google import genai
         except ImportError as exc:  # pragma: no cover - import guard depends on env
             raise AIConfigurationError(
-                "google-generativeai is not installed. Add it to runtime dependencies."
+                "google-genai is not installed. Add it to runtime dependencies."
             ) from exc
         return genai

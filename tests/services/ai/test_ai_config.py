@@ -22,11 +22,12 @@ def test_app_settings_valid_explicit_values() -> None:
 
 
 def test_app_settings_missing_api_key() -> None:
-    with pytest.raises(ValidationError):
-        AppSettings(
-            _env_file=None,
-            gemini_api_key="",
-        )
+    settings = AppSettings(
+        _env_file=None,
+        gemini_api_key="",
+    )
+
+    assert settings.gemini_api_key == ""
 
 
 def test_app_settings_invalid_types() -> None:

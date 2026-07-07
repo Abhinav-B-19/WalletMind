@@ -35,3 +35,4 @@ class AIHealthStatus(BaseModel):
     configured: bool
     model: str
     status: str
+    source: str = "none"

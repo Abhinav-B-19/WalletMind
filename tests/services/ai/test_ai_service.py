@@ -37,7 +37,7 @@ class StubGeminiClient:
         )
 
     def get_configuration_status(self):
-        return True, "gemini-1.5-flash"
+        return True, "gemini-1.5-flash", "session"
 
 
 def test_ai_service_orchestration() -> None:
@@ -100,3 +100,4 @@ def test_ai_service_health() -> None:
     assert health.configured is True
     assert health.model == "gemini-1.5-flash"
     assert health.status == "healthy"
+    assert health.source == "session"

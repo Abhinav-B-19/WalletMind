@@ -27,6 +27,14 @@ const userListEnvelopeSchema = z.object({
   data: z.array(userDataSchema),
 });
 
+const logoutEnvelopeSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.object({
+    status: z.string(),
+  }),
+});
+
 export type WalletMindUser = z.infer<typeof userDataSchema>;
 
 export async function submitRegistration(
@@ -62,6 +70,18 @@ export async function listUsers(): Promise<WalletMindUser[]> {
       throw new Error("Received an unexpected response from the server.");
     }
 
+    throw error;
+  }
+}
+
+export async function logoutUserSession(): Promise<void> {
+  try {
+    const response = await apiClient.post("/users/logout");
+    logoutEnvelopeSchema.parse(response.data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error("Received an unexpected response from the server.");
+    }
     throw error;
   }
 }

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, status
 from backend.app.api.dependencies import get_user_service
 from backend.app.api.schemas import ErrorResponse
 from backend.app.schemas.response import ApiResponse, DeleteUserStatusData
+from backend.app.services.ai.api_key_provider import clear_request_session
 from walletmind.schemas.user import UserCreateDTO, UserDTO, UserUpdateDTO
 from walletmind.services.user_service import UserService
 
@@ -99,3 +100,18 @@ def list_users(service: UserService = Depends(get_user_service)) -> ApiResponse[
 
     users = service.list_users()
     return ApiResponse(message="Users retrieved successfully.", data=users)
+
+
+@router.post(
+    "/logout",
+    response_model=ApiResponse[dict[str, str]],
+    status_code=status.HTTP_200_OK,
+)
+def logout() -> ApiResponse[dict[str, str]]:
+    """Clear current session state including in-memory Gemini key."""
+
+    clear_request_session()
+    return ApiResponse(
+        message="Logout completed successfully.",
+        data={"status": "logged_out"},
+    )

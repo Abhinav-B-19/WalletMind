@@ -201,6 +201,8 @@ vi.mock("@/context/global-loader-context", () => ({
 describe("routing", () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem("walletmind_ai_configured", "true");
+    localStorage.setItem("walletmind_ai_source", "session");
   });
 
   it("upload page loads for authenticated users", async () => {
@@ -469,5 +471,30 @@ describe("routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Judge Hub" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
+  });
+
+  it("redirects authenticated users to home when AI key is not configured", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+    localStorage.setItem("walletmind_ai_configured", "false");
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/app/dashboard"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Home" }),
+    ).toBeInTheDocument();
   });
 });

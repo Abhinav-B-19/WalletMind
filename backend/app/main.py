@@ -6,12 +6,15 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import threading
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-from backend.app.core.config import ALLOWED_ORIGINS
+from backend.app.core.config import ALLOWED_ORIGINS, get_ai_settings
+from backend.app.core.request_context import reset_current_request, set_current_request
 
 
 def _ensure_project_root_on_path() -> None:
@@ -74,6 +77,17 @@ def create_app() -> FastAPI:
 
     init_database()
 
+    ai_settings = get_ai_settings()
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=ai_settings.session_secret_key,
+        session_cookie=ai_settings.session_cookie_name,
+        max_age=ai_settings.session_max_age_seconds,
+        same_site="lax",
+        https_only=ai_settings.session_cookie_secure,
+    )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_ORIGINS,
@@ -121,6 +135,16 @@ def create_app() -> FastAPI:
     app.state.processing_dispatcher = ProcessingDispatcher(
         processing_service=app.state.statement_processing_service,
     )
+    app.state.gemini_key_cache = {}
+    app.state.gemini_key_cache_lock = threading.Lock()
+
+    @app.middleware("http")
+    async def _bind_request_context(request, call_next):
+        token = set_current_request(request)
+        try:
+            return await call_next(request)
+        finally:
+            reset_current_request(token)
 
     app.state.adk_runtime = WalletMindAdkRuntimeFactory().create()
 

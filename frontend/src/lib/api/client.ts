@@ -1,7 +1,13 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const DEFAULT_API_BASE_URL = (() => {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+})();
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 
 export class ApiClientError extends Error {
   code?: string;
@@ -27,6 +33,7 @@ export class ApiClientError extends Error {
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   timeout: 90000,
+  withCredentials: true,
 });
 
 apiClient.interceptors.response.use(
