@@ -22,6 +22,7 @@ vi.mock("react-router-dom", async () => {
       <a href={to}>{children}</a>
     ),
     useNavigate: () => navigateMock,
+    useLocation: () => ({ state: null }),
   };
 });
 
@@ -105,7 +106,7 @@ describe("LoginPage profile picker", () => {
 
     const remembered = localStorage.getItem(REMEMBERED_PROFILES_STORAGE_KEY);
     expect(remembered).not.toBeNull();
-    expect(navigateMock).toHaveBeenCalledWith("/app/judge", { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith("/app/home", { replace: true });
   });
 
   it("shows empty state and create new profile link", async () => {

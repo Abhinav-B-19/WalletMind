@@ -27,14 +27,7 @@ import { WorkspacePage } from "@/pages/workspace-page";
 export const appRoutes = createRoutesFromElements(
   <>
     <Route element={<PublicLayout />}>
-      <Route
-        path="/"
-        element={
-          <PublicOnlyRoute>
-            <HomePage />
-          </PublicOnlyRoute>
-        }
-      />
+      <Route path="/" element={<HomePage />} />
       <Route
         path="/login"
         element={
@@ -61,7 +54,7 @@ export const appRoutes = createRoutesFromElements(
         </ProtectedRoute>
       }
     >
-      <Route index element={<Navigate to="judge" replace />} />
+      <Route index element={<Navigate to="home" replace />} />
       <Route path="judge" element={<JudgeHubPage />} />
       <Route path="home" element={<WorkspacePage />} />
       <Route
@@ -115,7 +108,23 @@ export const appRoutes = createRoutesFromElements(
         }
       />
       <Route
+        path="report"
+        element={
+          <AIFeatureRoute>
+            <AppPlannerPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
         path="chat"
+        element={
+          <AIFeatureRoute>
+            <AppChatPage />
+          </AIFeatureRoute>
+        }
+      />
+      <Route
+        path="assistant"
         element={
           <AIFeatureRoute>
             <AppChatPage />

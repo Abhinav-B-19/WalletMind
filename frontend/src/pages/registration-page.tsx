@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { Button } from "@/components/ui/button";
@@ -37,12 +37,21 @@ const EMPTY_FORM: RegistrationFormData = {
 
 export function RegistrationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState<RegistrationFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => !isSubmitting, [isSubmitting]);
+  const redirectPath = useMemo(() => {
+    const from = (location.state as { from?: string } | null)?.from;
+    if (from && from.startsWith("/app")) {
+      return from;
+    }
+
+    return "/app/home";
+  }, [location.state]);
 
   const updateField = <K extends keyof RegistrationFormData>(
     key: K,
@@ -68,7 +77,7 @@ export function RegistrationPage() {
     try {
       const user = await submitRegistration(formData);
       setStoredUser(user);
-      navigate("/app/judge", { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       setSubmitError(
         error instanceof Error

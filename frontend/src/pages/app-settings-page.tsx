@@ -348,8 +348,9 @@ export function AppSettingsPage() {
                 </div>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   aria-label="Dismiss AI settings banner"
                   onClick={() => setAIBanner(null)}
                 >

@@ -391,6 +391,35 @@ describe("routing", () => {
     ).toBeInTheDocument();
   });
 
+  it("assistant alias route loads for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/assistant?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "AI Financial Assistant",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("monthly report page loads for authenticated users", async () => {
     localStorage.setItem(
       "walletmind_user",
@@ -420,9 +449,98 @@ describe("routing", () => {
     ).toBeInTheDocument();
   });
 
+  it("app root redirects authenticated users to home", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/app"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Home" }),
+    ).toBeInTheDocument();
+  });
+
+  it("report alias route loads monthly report for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/app/report?statement_id=8fe70b89-2325-42b6-82a6-16c6268d56eb",
+      ],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Monthly Financial Report",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("protected route redirects unauthenticated user", async () => {
     const router = createMemoryRouter(appRoutes, {
       initialEntries: ["/app/statements"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Existing Profiles" }),
+    ).toBeInTheDocument();
+  });
+
+  it("app root redirects unauthenticated users to login", async () => {
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/app"],
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Existing Profiles" }),
+    ).toBeInTheDocument();
+  });
+
+  it("public landing remains accessible for authenticated users", async () => {
+    localStorage.setItem(
+      "walletmind_user",
+      JSON.stringify({
+        id: "user-123",
+        name: "Route Tester",
+        occupation: "QA",
+        monthly_income: 5000,
+        currency: "USD",
+        primary_financial_goal: "Build Emergency Fund",
+      }),
+    );
+
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/"],
     });
 
     render(<RouterProvider router={router} />);
@@ -443,7 +561,7 @@ describe("routing", () => {
     render(<RouterProvider router={router} />);
 
     expect(
-      await screen.findByRole("heading", { name: "WalletMind" }),
+      await screen.findByRole("heading", { name: "Existing Profiles" }),
     ).toBeInTheDocument();
   });
 
@@ -473,7 +591,7 @@ describe("routing", () => {
     expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
   });
 
-  it("redirects authenticated users to home when AI key is not configured", async () => {
+  it("allows AI routes even when AI key is not configured", async () => {
     localStorage.setItem(
       "walletmind_user",
       JSON.stringify({
@@ -488,13 +606,15 @@ describe("routing", () => {
     localStorage.setItem("walletmind_ai_configured", "false");
 
     const router = createMemoryRouter(appRoutes, {
-      initialEntries: ["/app/dashboard"],
+      initialEntries: ["/app/agent-playground"],
     });
 
     render(<RouterProvider router={router} />);
 
     expect(
-      await screen.findByRole("heading", { name: "Home" }),
+      await screen.findByRole("heading", {
+        name: "Agent Playground",
+      }),
     ).toBeInTheDocument();
   });
 });

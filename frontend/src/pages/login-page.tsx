@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
 import { PageWrapper } from "@/components/layout/page-wrapper";
@@ -47,6 +47,7 @@ function formatDate(value: string | null | undefined): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const activeUser = getStoredUser();
   const [profiles, setProfiles] = useState<StoredWalletMindUser[]>([]);
   const [viewState, setViewState] = useState<ViewState>("idle");
@@ -107,9 +108,18 @@ export function LoginPage() {
     });
   }, [profiles, searchQuery]);
 
+  const redirectPath = useMemo(() => {
+    const from = (location.state as { from?: string } | null)?.from;
+    if (from && from.startsWith("/app")) {
+      return from;
+    }
+
+    return "/app/home";
+  }, [location.state]);
+
   const handleSelectProfile = (profile: StoredWalletMindUser) => {
     setStoredUser(profile);
-    navigate("/app/judge", { replace: true });
+    navigate(redirectPath, { replace: true });
   };
 
   const handleLogout = async () => {
@@ -167,7 +177,7 @@ export function LoginPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button onClick={() => navigate("/app/judge")}>Continue</Button>
+                <Button onClick={() => navigate(redirectPath)}>Continue</Button>
                 <Button
                   variant="secondary"
                   onClick={() => navigate("/register", { replace: true })}

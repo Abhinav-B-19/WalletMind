@@ -19,6 +19,7 @@ vi.mock("react-router-dom", async () => {
       <a href={to}>{children}</a>
     ),
     useNavigate: () => navigateMock,
+    useLocation: () => ({ state: null }),
   };
 });
 
@@ -82,6 +83,6 @@ describe("RegistrationPage", () => {
       currency: "INR",
       primary_financial_goal: "Build Emergency Fund",
     });
-    expect(navigateMock).toHaveBeenCalledWith("/app/judge", { replace: true });
+    expect(navigateMock).toHaveBeenCalledWith("/app/home", { replace: true });
   });
 });

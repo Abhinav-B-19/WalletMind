@@ -70,7 +70,12 @@ const links = [
     icon: Timer,
     comingSoon: false,
   },
-  { to: "/app/chat", label: "AI Assistant", icon: Bot, comingSoon: false },
+  {
+    to: "/app/assistant",
+    label: "AI Assistant",
+    icon: Bot,
+    comingSoon: false,
+  },
   { to: "/app/settings", label: "Settings", icon: Settings, comingSoon: false },
 ];
 
