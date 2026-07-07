@@ -13,19 +13,125 @@ AI-powered Personal Financial Intelligence Platform
 
 WalletMind transforms raw bank statements into explainable financial intelligence using a coordinator-led multi-agent architecture built with Google ADK and exposed through both REST and MCP.
 
-## System Architecture
+## Why WalletMind
 
-![WalletMind Architecture](assets/diagrams/walletmind-architecture-overview.png)
+Traditional finance apps mostly visualize transactions. WalletMind adds orchestration, explainability, and actionable recommendations:
 
-Architecture highlights:
+- Coordinator-based intent routing with explicit execution strategy.
+- Specialized AI agents for health, insights, budget, report, assistant, and processing.
+- Deterministic Function Tools to preserve auditable business logic boundaries.
+- Shared core reused by both REST and MCP, avoiding logic duplication.
+- Judge-facing transparency via Agent Playground timeline and per-agent result cards.
 
-- Coordinator for intent routing and orchestration strategy.
-- Agent Registry for capability-to-agent discovery.
-- Specialized agents for health, insights, budget, report, assistant, and processing.
-- ADK Function Tools as deterministic execution boundaries.
-- Shared WalletMind service layer as the single source of business logic.
-- REST APIs for product workflows and MCP endpoints for AI-host interoperability.
-- Persistent storage through SQLAlchemy-backed data models.
+## Architecture (Code-Derived)
+
+### Overall System Architecture
+
+```mermaid
+flowchart TD
+    FE[React Frontend\nLanding Dashboard Upload Settings\nAgent Playground Judge Hub] --> REST[FastAPI REST /api/v1]
+    REST --> COORD[CoordinatorAgent]
+    COORD --> AGENTS[Specialized Agents]
+    AGENTS --> TOOLS[ADK Function Tools]
+    TOOLS --> SERVICES[WalletMind Services]
+    SERVICES --> DB[(SQLite or PostgreSQL via SQLAlchemy)]
+
+    MCP_CLIENT[External MCP Client or Host] --> MCP_SERVER[MCP Infrastructure Server /mcp]
+    MCP_SERVER --> MCP_REG[MCP Tool Registry]
+    MCP_REG --> MCP_ADAPTER[WalletMind MCP Adapter]
+    MCP_ADAPTER --> COORD
+```
+
+### ADK Runtime Diagram
+
+```mermaid
+flowchart TD
+    RUNTIME[WalletMindAdkRuntimeFactory]
+    RUNTIME --> SESSION[Session Service Factory]
+    RUNTIME --> MEMORY[Memory Service Factory]
+    RUNTIME --> WORKFLOW[Workflow Factory]
+    WORKFLOW --> ROOT[Root Workflow\nwalletmind_bootstrap]
+    RUNTIME --> RUNNER[google.adk Runner wrapped by WalletMindRunner]
+
+    MAIN[backend.app.main create_app] --> COORD[CoordinatorAgent]
+    MAIN --> REG[AgentRegistry]
+    REG --> SA[Specialized Agents]
+```
+
+### Coordinator Decision Flow
+
+```mermaid
+flowchart TD
+    REQ[Request: query + user/session + inputs] --> INTENT[Intent Detection]
+    INTENT --> CAP[Capability Resolution]
+    CAP --> MODE{Execution Mode}
+    MODE -->|single| SINGLE[Single Agent Selection]
+    MODE -->|multi| MULTI[Ordered Multi-Agent Plan]
+    SINGLE --> EXEC[Agent Execution via Registry]
+    MULTI --> EXEC
+    EXEC --> AGG[Aggregate Results + Trace + Metadata]
+    AGG --> RESP[API or MCP Response Envelope]
+```
+
+### Specialized Agent Diagram
+
+```mermaid
+flowchart LR
+    C[CoordinatorAgent] --> P[ProcessingAgent]
+    C --> H[HealthAgent]
+    C --> I[InsightsAgent]
+    C --> B[BudgetAgent]
+    C --> R[ReportAgent]
+    C --> A[AssistantAgent]
+
+    P --> PT[processing_tool]
+    H --> HT[health_tool]
+    I --> IT[insights_tool]
+    B --> BT[budget_tool]
+    R --> RT[report_tool]
+    A --> AT[assistant_tool]
+```
+
+### Function Tool Diagram
+
+```mermaid
+flowchart TD
+    AGENT[Specialized Agent] --> FT[ADK FunctionTool]
+    FT --> SVC[WalletMind Service]
+    SVC --> DB[(Database)]
+```
+
+### MCP Architecture
+
+```mermaid
+flowchart TD
+    EC[External Client] --> MS[MCP Server]
+    MS --> MR[MCP Tool Registry]
+    MR --> MA[WalletMind MCP Adapter]
+    MA --> CO[CoordinatorAgent]
+    CO --> SA[Specialized Agents]
+    SA --> SV[WalletMind Services]
+```
+
+### REST + MCP Shared Core
+
+```mermaid
+flowchart LR
+    REST[REST /api/v1] --> COORD[Coordinator]
+    MCP[MCP /mcp/tools/*/execute] --> COORD
+    COORD --> CORE[Shared Core: Agents + Tools + Services]
+```
+
+### Frontend Architecture
+
+```mermaid
+flowchart TD
+    PAGES[Landing Dashboard Upload Settings\nAgent Playground Judge Hub] --> API[Axios API Client + React Query]
+    API --> REST[FastAPI /api/v1]
+    REST --> COORD[Coordinator]
+    COORD --> RESULTS[Aggregated and Per-Agent Results]
+    RESULTS --> TIMELINE[Interactive Timeline + Cards]
+```
 
 ## Product Preview
 
@@ -81,67 +187,29 @@ Architecture highlights:
 
 ![MCP Swagger](assets/screenshots/swagger-mcp.png)
 
-## Why WalletMind?
-
-Traditional finance apps visualize historical transactions. WalletMind reasons about finances.
-
-- Coordinator-led orchestration routes each request to the right capability mix.
-- Multi-agent execution decomposes complex financial analysis into specialized tasks.
-- Deterministic tools keep outputs auditable and grounded in real statement data.
-- Explainable recommendations show decision traces, not opaque answers.
-- REST + MCP enable both product UX and standards-based AI-host integration.
-
-## Key Features
-
-- [x] Google ADK multi-agent system
-- [x] Coordinator Agent orchestration layer
-- [x] Specialized domain agents
-- [x] Agent Registry discovery model
-- [x] Function Tool execution boundary
-- [x] Standalone MCP server
-- [x] Versioned REST APIs
-- [x] Agent Playground with timeline
-- [x] Judge Hub navigation experience
-- [x] Explainable financial analysis
-- [x] Budget recommendations
-- [x] Monthly financial reports
-- [x] Retrieval-grounded AI Assistant
-
-## Google AI Agents Concepts Demonstrated
-
-| Concept         | Implementation                                           |
-| --------------- | -------------------------------------------------------- |
-| Google ADK      | Coordinator + specialized ADK agents                     |
-| Multi-Agent     | Coordinator capability routing and aggregation           |
-| Function Tools  | WalletMind Function Tool layer in `backend/app/tools/`   |
-| MCP             | Standalone MCP server + adapter + registry               |
-| Shared Services | Single source of business logic in WalletMind services   |
-| Explainability  | Decision records, timeline traces, and per-agent outputs |
-
-## AI Execution Flow
-
-```mermaid
-flowchart TD
-	U[User Query] --> C[Coordinator Agent]
-	C --> D[Capability Discovery]
-	D --> A[Specialized Agents]
-	A --> T[ADK Function Tools]
-	T --> S[WalletMind Services]
-	S --> DB[(Database)]
-```
-
 ## Technology Stack
 
-| Layer            | Technology                        | Purpose                                      |
-| ---------------- | --------------------------------- | -------------------------------------------- |
-| Frontend         | React + TypeScript + Vite         | Interactive financial product UX             |
-| State/Data       | React Query + Axios               | Async API state and request orchestration    |
-| Backend API      | FastAPI + Pydantic                | Versioned API contracts and validation       |
-| Persistence      | SQLAlchemy                        | Statement, transaction, and analysis storage |
-| AI Runtime       | Google ADK + Gemini               | Planner-driven agent reasoning               |
-| Tool Boundary    | ADK FunctionTool                  | Deterministic service invocation contracts   |
-| Protocol Interop | Model Context Protocol (MCP)      | Tool discovery and execution for AI hosts    |
-| Testing          | Pytest + Vitest + Testing Library | Backend and frontend quality gates           |
+| Layer            | Technology                          | Purpose                                          |
+| ---------------- | ----------------------------------- | ------------------------------------------------ |
+| Frontend         | React + TypeScript + Vite           | Product UI and judge workflow                    |
+| State/Data       | React Query + Axios                 | Data fetching and cache lifecycle                |
+| Backend API      | FastAPI + Pydantic                  | Versioned API contracts                          |
+| Persistence      | SQLAlchemy                          | Statement, transaction, and analysis persistence |
+| AI Runtime       | Google ADK + Gemini                 | Coordinator and specialized-agent reasoning      |
+| Tool Boundary    | ADK FunctionTool                    | Deterministic service invocation                 |
+| Protocol Interop | MCP                                 | Tool discovery and execution for AI hosts        |
+| Testing          | Pytest + Vitest + Testing Library   | Backend, MCP, ADK, and frontend quality gates    |
+| Deployment       | Render + Vercel + GitHub Actions CI | Repeatable delivery workflow                     |
+
+## Security and Configuration
+
+- Session middleware with signed cookies and configurable policy.
+- CORS allowlist loaded from environment variables.
+- Request context binding for per-request state.
+- Environment-driven AI configuration and model controls.
+- Session-scoped AI key management with validation and status endpoints.
+
+See: [docs/security/security.md](docs/security/security.md)
 
 ## Quick Start
 
@@ -164,7 +232,7 @@ npm install
 npm run dev
 ```
 
-Frontend: `http://127.0.0.1:5173`
+Frontend: `http://localhost:5173`
 
 ### MCP
 
@@ -181,44 +249,41 @@ MCP: `http://127.0.0.1:8100`
 - REST Swagger: `http://127.0.0.1:8000/docs`
 - MCP Swagger: `http://127.0.0.1:8100/docs`
 
-### Agent Playground
+### Judge Routes
 
-- `http://127.0.0.1:5173/app/agent-playground`
+- Agent Playground: `http://localhost:5173/app/agent-playground`
+- Judge Hub: `http://localhost:5173/app/judge`
 
-### Judge Hub
+## Evaluation and Evidence
 
-- `http://127.0.0.1:5173/app/judge`
-
-## Demo Flow
-
-1. Upload Statement
-2. Dashboard
-3. Agent Playground
-4. Coordinator Decision
-5. Execution Timeline
-6. Judge Hub
-7. REST Swagger
-8. MCP Swagger
+| Requirement       | Evidence                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| Google ADK        | `backend/app/adk/`, `backend/app/agents/`                                                   |
+| Coordinator       | `backend/app/agents/coordinator_agent.py`                                                   |
+| Multi-Agent       | `backend/app/agents/*_agent.py`                                                             |
+| Function Tools    | `backend/app/tools/`                                                                        |
+| MCP               | `backend/app/mcp/`                                                                          |
+| REST API          | `backend/app/routers/`, `backend/app/api/router.py`                                         |
+| Frontend Judge UX | `frontend/src/pages/app-agent-playground-page.tsx`, `frontend/src/pages/judge-hub-page.tsx` |
+| Tests             | `tests/core/`, `tests/api/`, `frontend/src/**/*.test.tsx`                                   |
 
 ## Judge Resources
 
-| Resource                                                  | Description                                       |
-| --------------------------------------------------------- | ------------------------------------------------- |
-| [📘 Quick Start](docs/judge/QUICK_START.md)               | Fastest local setup path for evaluation.          |
-| [🏗 Architecture](docs/judge/ARCHITECTURE.md)             | System design, diagrams, and execution topology.  |
-| [🎯 Rubric Mapping](docs/judge/RUBRIC_MAPPING.md)         | Direct mapping from judging criteria to evidence. |
-| [🧪 API Examples](docs/judge/API_EXAMPLES.md)             | Copy-paste REST and MCP validation requests.      |
-| [📑 Evaluation Summary](docs/judge/EVALUATION_SUMMARY.md) | Compact capstone evidence cheat sheet.            |
-| [▶ Demo Guide](docs/judge/DEMO_GUIDE.md)                  | Scenario-driven walkthrough for live judging.     |
-| [✅ Judge Checklist](docs/judge/JUDGE_CHECKLIST.md)       | Fast verification checklist during review.        |
+| Resource                                                   | Description                                    |
+| ---------------------------------------------------------- | ---------------------------------------------- |
+| [Quick Start](docs/judge/QUICK_START.md)                   | Fast local run path for judges                 |
+| [Architecture](docs/judge/ARCHITECTURE.md)                 | Code-derived architecture and diagrams         |
+| [Rubric Mapping](docs/judge/RUBRIC_MAPPING.md)             | Rubric-to-evidence matrix                      |
+| [API Examples](docs/judge/API_EXAMPLES.md)                 | Copy/paste REST and MCP requests               |
+| [Evaluation Summary](docs/judge/EVALUATION_SUMMARY.md)     | Capstone concepts checklist                    |
+| [Demo Guide](docs/judge/DEMO_GUIDE.md)                     | Scenario walkthrough for recording and judging |
+| [Notebook](notebooks/walletmind_capstone_submission.ipynb) | Kaggle-facing narrative notebook               |
 
-## Future Roadmap
+## Deployment
 
-- Export-ready PDF reporting.
-- Multi-statement trend and seasonality intelligence.
-- Goal simulation and what-if planning depth.
-- Extended collaboration flows for households/advisors.
-- Optional advanced MCP service integrations.
+- Backend deployment spec: [render.yaml](render.yaml)
+- Frontend deployment config: [frontend/vercel.json](frontend/vercel.json)
+- CI pipeline: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
 ## License
 

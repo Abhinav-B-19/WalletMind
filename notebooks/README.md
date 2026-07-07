@@ -1,6 +1,6 @@
 # WalletMind Kaggle Notebooks
 
-This folder contains the Kaggle-facing notebook experience for WalletMind.
+This folder contains the Kaggle-facing notebook experience for WalletMind and stays terminology-aligned with the main architecture and judge documentation.
 
 ## K1 Deliverable
 
@@ -9,6 +9,7 @@ This folder contains the Kaggle-facing notebook experience for WalletMind.
   - Rich markdown narrative and visual storytelling
   - Reuses existing repository docs and assets
   - No runtime API calls (offline-renderable)
+  - Uses the same architecture language as `README.md` and `docs/judge/ARCHITECTURE.md` (Coordinator, Specialized Agents, Function Tools, MCP, shared REST/MCP core)
 
 ## Folder Structure
 
@@ -58,3 +59,9 @@ Product screenshots:
 
 K1 notebook is intentionally static-first and does not require backend/frontend/database availability.
 This ensures top-to-bottom execution in isolated notebook environments.
+
+## Consistency Guardrails
+
+- Coordinator terminology must match `backend/app/agents/coordinator_agent.py` and `docs/judge/ARCHITECTURE.md`.
+- Workflow wording should reflect that `backend/app/adk/workflow.py` currently provides a bootstrap workflow skeleton.
+- Any runtime endpoint references should match `docs/judge/QUICK_START.md`.

@@ -1,61 +1,45 @@
 # Evaluation Summary (Judge Cheat Sheet)
 
-WalletMind demonstrates all required capstone concepts with evidence-backed implementation.
+WalletMind demonstrates all required capstone concepts with implementation-backed evidence.
 
 ## Implemented Concepts
 
-- [x] Google ADK
-- [x] Multi-Agent System
-- [x] Coordinator
-- [x] Function Tools
-- [x] MCP Server
-- [x] REST + MCP coexistence
-- [x] Agent Playground
-- [x] AI Assistant
-- [x] Existing Financial Platform integration
+- [x] Google ADK runtime integration
+- [x] Coordinator-led multi-agent orchestration
+- [x] Specialized agent system
+- [x] Function Tool boundary
+- [x] MCP infrastructure server
+- [x] REST + MCP shared core architecture
+- [x] Agent Playground with execution timeline
+- [x] Retrieval-grounded AI assistant
+- [x] Existing financial platform service reuse
 
-## Why Each Exists
+## Where to Verify Quickly
 
-### Google ADK
+| Concept                       | Verification File(s)                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| ADK runtime                   | `backend/app/adk/runtime.py`, `backend/app/adk/workflow.py`                                 |
+| Coordinator                   | `backend/app/agents/coordinator_agent.py`                                                   |
+| Specialized agents            | `backend/app/agents/*_agent.py`                                                             |
+| Function tools                | `backend/app/tools/`                                                                        |
+| REST orchestration endpoint   | `backend/app/routers/agents.py`                                                             |
+| MCP server and registry       | `backend/app/mcp/server.py`, `backend/app/mcp/registry.py`                                  |
+| MCP adapter                   | `backend/app/mcp/adapter.py`                                                                |
+| Frontend evaluator experience | `frontend/src/pages/app-agent-playground-page.tsx`, `frontend/src/pages/judge-hub-page.tsx` |
+| Test coverage evidence        | `tests/core/adk/`, `tests/core/agents/`, `tests/core/mcp/`, `frontend/src/**/*.test.tsx`    |
 
-Provides standardized agent runtime and tooling primitives (`google.adk.Agent`, FunctionTool).
+## Why the Architecture Scores Well
 
-### Multi-Agent System
+- Explicit coordinator trace improves explainability for judges.
+- Capability-oriented specialization reduces hidden coupling.
+- Function tools isolate business logic from LLM orchestration.
+- Shared REST/MCP core avoids duplicated implementation paths.
+- Judge Hub and Agent Playground surface observable runtime evidence.
 
-Separates concerns across domain-focused agents to keep orchestration explainable and maintainable.
+## Recommended Judge Path
 
-### Coordinator
-
-Central orchestration intelligence selects execution strategy and aggregates outputs.
-
-### Function Tools
-
-Creates deterministic, testable boundaries between agent reasoning and business services.
-
-### MCP Server
-
-Enables standards-based tool discovery/execution for external AI hosts.
-
-### REST + MCP
-
-Supports both product UI workflows and AI-host interoperability without duplicating business logic.
-
-### Agent Playground
-
-Gives judges and developers transparent visibility into coordinator decisions, timeline, and per-agent outputs.
-
-### AI Assistant
-
-Offers retrieval-grounded conversational support on top of statement data.
-
-### Existing Financial Platform
-
-Reuses production-style services (health, insights, budget, report) rather than demo-only mock logic.
-
-## Evaluation Pointers
-
-- Start: `docs/judge/QUICK_START.md`
-- Demonstration: `docs/judge/DEMO_GUIDE.md`
-- Architecture details: `docs/judge/ARCHITECTURE.md`
-- Requirement evidence: `docs/judge/RUBRIC_MAPPING.md`
-- API copy/paste samples: `docs/judge/API_EXAMPLES.md`
+1. [QUICK_START.md](./QUICK_START.md)
+2. [DEMO_GUIDE.md](./DEMO_GUIDE.md)
+3. [ARCHITECTURE.md](./ARCHITECTURE.md)
+4. [RUBRIC_MAPPING.md](./RUBRIC_MAPPING.md)
+5. [API_EXAMPLES.md](./API_EXAMPLES.md)
